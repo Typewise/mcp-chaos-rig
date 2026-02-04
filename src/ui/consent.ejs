@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authorize - MCP Chaos Rig</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 16px;
+      }
+      .consent-card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 520px;
+        width: 100%;
+      }
+      h1 {
+        color: #58a6ff;
+        font-size: 16px;
+        margin-bottom: 16px;
+      }
+      .info {
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 20px;
+        font-size: 12px;
+      }
+      .info-row {
+        display: flex;
+        gap: 8px;
+        padding: 4px 0;
+      }
+      .info-label {
+        color: #8b949e;
+        min-width: 80px;
+      }
+      .info-value {
+        color: #c9d1d9;
+        word-break: break-all;
+      }
+      h2 {
+        color: #8b949e;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+      }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 10px 16px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .btn .label {
+        font-weight: 600;
+      }
+      .btn .desc {
+        color: #8b949e;
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .btn-approve {
+        background: #238636;
+        border-color: #238636;
+        color: #fff;
+      }
+      .btn-approve:hover {
+        background: #2ea043;
+      }
+      .btn-approve .desc {
+        color: #ffffffaa;
+      }
+      .btn-decline {
+        background: #21262d;
+        color: #f85149;
+        border-color: #f85149;
+      }
+      .btn-decline:hover {
+        background: #f8514922;
+      }
+      .btn-wrong {
+        background: #21262d;
+        color: #d29922;
+        border-color: #d29922;
+      }
+      .btn-wrong:hover {
+        background: #d2992222;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="consent-card">
+      <h1>Authorization Request</h1>
+      <div class="info">
+        <div class="info-row">
+          <span class="info-label">Client:</span
+          ><span class="info-value"><%= clientName %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Scopes:</span
+          ><span class="info-value"><%= scopes %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Redirect:</span
+          ><span class="info-value"><%= redirectUri %></span>
+        </div>
+      </div>
+      <h2>Choose response</h2>
+      <div class="actions">
+        <form method="POST" action="/authorize-decision">
+          <input type="hidden" name="id" value="<%= pendingId %>" /><input
+            type="hidden"
+            name="action"
+            value="approve"
+          />
+          <button type="submit" class="btn btn-approve">
+            <div class="label">Approve</div>
+            <div class="desc">
+              Redirect with valid authorization code + correct state
+            </div>
+          </button>
+        </form>
+        <form method="POST" action="/authorize-decision">
+          <input type="hidden" name="id" value="<%= pendingId %>" /><input
+            type="hidden"
+            name="action"
+            value="decline"
+          />
+          <button type="submit" class="btn btn-decline">
+            <div class="label">Decline</div>
+            <div class="desc">Redirect with error=access_denied</div>
+          </button>
+        </form>
+        <form method="POST" action="/authorize-decision">
+          <input type="hidden" name="id" value="<%= pendingId %>" /><input
+            type="hidden"
+            name="action"
+            value="wrong-code"
+          />
+          <button type="submit" class="btn btn-wrong">
+            <div class="label">Wrong Code</div>
+            <div class="desc">
+              Redirect with an invalid authorization code (token exchange will
+              fail)
+            </div>
+          </button>
+        </form>
+        <form method="POST" action="/authorize-decision">
+          <input type="hidden" name="id" value="<%= pendingId %>" /><input
+            type="hidden"
+            name="action"
+            value="wrong-state"
+          />
+          <button type="submit" class="btn btn-wrong">
+            <div class="label">Wrong State</div>
+            <div class="desc">
+              Redirect with valid code but tampered state parameter (client
+              should reject)
+            </div>
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

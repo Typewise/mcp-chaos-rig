@@ -1,0 +1,95 @@
+  html { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-color: #30363d #161b22; scrollbar-width: thin; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #161b22; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+  body { font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; background: #0d1117; color: #c9d1d9; font-size: 13px; display: flex; flex-direction: column; height: 100vh; }
+
+  /* Top nav */
+  nav { display: flex; align-items: center; gap: 0; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0; padding: 0 16px; }
+  nav .brand { color: #58a6ff; font-weight: 700; font-size: 14px; padding: 10px 16px 10px 0; border-right: 1px solid #30363d; margin-right: 4px; white-space: nowrap; display: inline-flex; align-items: center; }
+  nav button { background: none; border: none; color: #8b949e; padding: 10px 16px; cursor: pointer; font-family: inherit; font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav button:hover { color: #c9d1d9; }
+  nav button.active { color: #c9d1d9; border-bottom-color: #58a6ff; }
+  nav .spacer { flex: 1; }
+  nav .nav-badges { display: flex; gap: 8px; align-items: center; }
+  .badge { background: #21262d; border: 1px solid #30363d; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-dot.active { background: #3fb950; }
+  .status-dot.inactive { background: #6e7681; }
+
+  /* Panels */
+  .tab-content { flex: 1; overflow: hidden; }
+  .tab-panel { display: none; height: 100%; overflow-y: auto; padding: 16px; }
+  .tab-panel.active { display: block; }
+  .tab-panel.active.flex-panel { display: flex; }
+  .tab-panel.flex-panel { overflow: hidden; }
+
+  /* Cards */
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { color: #58a6ff; font-size: 13px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card h3 { color: #8b949e; font-size: 11px; margin: 12px 0 6px; text-transform: uppercase; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* Form elements */
+  label { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+  input[type="radio"] { accent-color: #58a6ff; }
+  input[type="text"], input[type="number"] { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 8px; border-radius: 4px; font-family: inherit; font-size: 13px; width: 100%; }
+  input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: #58a6ff; }
+  select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 8px; border-radius: 4px; font-family: inherit; font-size: 12px; }
+  button { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
+  button:hover { background: #30363d; }
+  button.danger { border-color: #f85149; color: #f85149; }
+  button.danger:hover { background: #f8514922; }
+
+  /* Toggle switch */
+  .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; inset: 0; background: #30363d; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+  .toggle .slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: #8b949e; border-radius: 50%; transition: 0.2s; }
+  .toggle input:checked + .slider { background: #238636; }
+  .toggle input:checked + .slider::before { transform: translateX(16px); background: #fff; }
+
+  /* Tool row */
+  .tool-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .tool-name { flex: 1; font-weight: 600; }
+  .tool-schema { font-size: 11px; color: #6e7681; margin-left: 46px; padding: 2px 0; }
+
+  /* Log */
+  .log-entry { padding: 4px 0; border-bottom: 1px solid #21262d; font-size: 11px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .log-time { color: #6e7681; white-space: nowrap; }
+  .log-method { font-weight: 600; min-width: 50px; }
+  .log-method.POST { color: #3fb950; }
+  .log-method.GET { color: #58a6ff; }
+  .log-method.DELETE { color: #f85149; }
+  .log-session { color: #8b949e; font-size: 10px; }
+  .log-source { font-size: 10px; padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .log-source.mcp { color: #d2a8ff; }
+  .log-source.auth { color: #f0883e; }
+  .log-status { min-width: 24px; text-align: right; }
+  .log-status.s2xx { color: #3fb950; }
+  .log-status.s3xx { color: #d2a8ff; }
+  .log-status.s4xx { color: #f0883e; }
+  .log-status.s5xx { color: #f85149; }
+  .log-rpc { color: #79c0ff; font-weight: 600; }
+  .log-tool { color: #d2a8ff; }
+  .log-args { color: #6e7681; font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-basis: 100%; padding-left: 60px; }
+
+  /* URLs */
+  .url-display { background: #0d1117; border: 1px solid #21262d; padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #8b949e; word-break: break-all; margin: 4px 0; }
+
+  /* Section divider inside cards */
+  .section { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #21262d; }
+  .section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  /* Contacts table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: #8b949e; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #30363d; }
+  td { padding: 6px 8px; border-bottom: 1px solid #21262d; }
+  tr:hover td { background: #1c2128; }
+  td.id-col { color: #6e7681; width: 40px; }
+  td.notes-col { color: #8b949e; font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.date-col { color: #6e7681; font-size: 11px; white-space: nowrap; }
+  .empty-state { color: #6e7681; padding: 16px; text-align: center; }

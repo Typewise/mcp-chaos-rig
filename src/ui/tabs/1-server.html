@@ -1,0 +1,95 @@
+  <!-- SERVER TAB -->
+  <div class="tab-panel active" id="tab-server">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <h2>Connection URLs</h2>
+          <div class="section">
+            <div style="margin:4px 0"><strong>MCP endpoint:</strong></div>
+            <div class="url-display" id="url-mcp"></div>
+            <div style="margin:4px 0"><strong>Auth server:</strong></div>
+            <div class="url-display" id="url-oauth"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Slow Mode</h2>
+          <div class="tool-row">
+            <label class="toggle">
+              <input type="checkbox" id="slow-mode" onchange="toggleSlowMode(this.checked)">
+              <span class="slider"></span>
+            </label>
+            <span>Delay tool and auth responses</span>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center">
+            <input type="number" id="slow-min" value="500" min="0" style="width:80px" onchange="updateSlowRange()">
+            <span>–</span>
+            <input type="number" id="slow-max" value="3000" min="0" style="width:80px" onchange="updateSlowRange()">
+            <span style="color:#8b949e">ms</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Flaky Tools</h2>
+          <div class="tool-row">
+            <label class="toggle">
+              <input type="checkbox" id="flaky-tools" onchange="toggleFlakyTools(this.checked)">
+              <span class="slider"></span>
+            </label>
+            <span>Randomly fail tool calls</span>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center">
+            <input type="number" id="flaky-pct" value="20" min="0" max="100" style="width:80px" onchange="updateFlakyPct()">
+            <span style="color:#8b949e">% failure rate</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Authentication</h2>
+          <div class="section">
+            <h3>Mode</h3>
+            <label><input type="radio" name="authMode" value="none" checked> None</label>
+            <label><input type="radio" name="authMode" value="bearer"> Bearer Token</label>
+            <label><input type="radio" name="authMode" value="oauth"> OAuth 2.1</label>
+          </div>
+
+          <div class="section">
+            <p style="color:#8b949e; font-size:11px" id="auth-desc">No auth. All requests accepted. YOLO.</p>
+          </div>
+
+          <div class="section" id="bearer-config" style="display:none">
+            <h3>Bearer Token</h3>
+            <input type="text" id="bearer-token" value="test-token-123" placeholder="Enter bearer token">
+            <button style="margin-top:8px" onclick="updateBearerToken()">Update Token</button>
+            <h3>Token Validation</h3>
+            <div style="display:flex; gap:12px; align-items:center">
+              <label><input type="radio" name="rejectBearer" value="none" checked onchange="setRejectAuth('bearer', this.value)"> Accept</label>
+              <label><input type="radio" name="rejectBearer" value="401" onchange="setRejectAuth('bearer', this.value)"> 401 (invalid token)</label>
+              <label><input type="radio" name="rejectBearer" value="500" onchange="setRejectAuth('bearer', this.value)"> 500 (server error)</label>
+            </div>
+          </div>
+
+          <div class="section" id="oauth-config" style="display:none">
+            <h3>Token Validation</h3>
+            <div style="display:flex; gap:12px; align-items:center">
+              <label><input type="radio" name="rejectOAuth" value="none" checked onchange="setRejectAuth('oauth', this.value)"> Accept</label>
+              <label><input type="radio" name="rejectOAuth" value="401" onchange="setRejectAuth('oauth', this.value)"> 401 (invalid token)</label>
+              <label><input type="radio" name="rejectOAuth" value="500" onchange="setRejectAuth('oauth', this.value)"> 500 (server error)</label>
+            </div>
+            <h3>OAuth Endpoints</h3>
+            <div style="margin:4px 0"><strong>Discovery:</strong></div>
+            <div class="url-display" id="oauth-discovery"></div>
+            <div style="margin:4px 0"><strong>Authorize:</strong></div>
+            <div class="url-display" id="oauth-authorize"></div>
+            <div style="margin:4px 0"><strong>Token:</strong></div>
+            <div class="url-display" id="oauth-token"></div>
+            <div style="margin:4px 0"><strong>Register:</strong></div>
+            <div class="url-display" id="oauth-register"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
