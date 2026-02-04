@@ -13,6 +13,9 @@ interface SessionEntry {
 
 const sessions = new Map<string, SessionEntry>();
 
+const PORT = parseInt(process.env.PORT || "4100", 10);
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
 function registerToolOnServer(server: McpServer, def: ToolDef) {
   return server.registerTool(def.name, {
     title: def.title,
@@ -26,16 +29,11 @@ function registerToolOnServer(server: McpServer, def: ToolDef) {
   });
 }
 
-const MCP_PORT = parseInt(process.env.PORT || "4100", 10);
-
 function createSession(): SessionEntry {
   const server = new McpServer({
     name: "MCP Chaos Rig",
     version: "1.0.0",
-    icons: [{
-      src: `http://localhost:${MCP_PORT}/favicon.svg`,
-      mimeType: "image/svg+xml",
-    }],
+    icons: [{ src: `${BASE_URL}/favicon.svg`, mimeType: "image/svg+xml" }],
   });
 
   const transport = new StreamableHTTPServerTransport({
@@ -43,19 +41,14 @@ function createSession(): SessionEntry {
   });
 
   const registeredTools = new Map<string, ReturnType<McpServer["registerTool"]>>();
-
-  // Register currently active tools
-  const activeTools = getActiveTools(stateManager.state);
-  for (const def of activeTools) {
-    const registered = registerToolOnServer(server, def);
-    registeredTools.set(def.name, registered);
+  for (const def of getActiveTools(stateManager.state)) {
+    registeredTools.set(def.name, registerToolOnServer(server, def));
   }
 
   return { server, transport, registeredTools };
 }
 
 export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }, res: ServerResponse) {
-  // For GET/DELETE, look up existing session
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
   if (req.method === "GET" || req.method === "DELETE") {
@@ -66,38 +59,28 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
     }
     const entry = sessions.get(sessionId)!;
     await entry.transport.handleRequest(req, res, req.body);
-    if (req.method === "DELETE") {
-      sessions.delete(sessionId);
-    }
+    if (req.method === "DELETE") sessions.delete(sessionId);
     return;
   }
 
-  // POST - either new session or existing
   if (sessionId && sessions.has(sessionId)) {
     const entry = sessions.get(sessionId)!;
     await entry.transport.handleRequest(req, res, req.body);
     return;
   }
 
-  // New session
   const entry = createSession();
   await entry.server.connect(entry.transport);
-
-  // Handle the request - the transport will set the session ID in the response
   await entry.transport.handleRequest(req, res, req.body);
 
   const newSessionId = entry.transport.sessionId;
   if (newSessionId) {
     sessions.set(newSessionId, entry);
-
-    // Clean up on transport close
-    entry.transport.onclose = () => {
-      sessions.delete(newSessionId);
-    };
+    entry.transport.onclose = () => sessions.delete(newSessionId);
   }
 }
 
-// Propagate tool changes to all active sessions
+// Live-update tools in active sessions when UI toggles/changes them
 stateManager.on("tool-change", (change: { toolName: string; type: string; enabled?: boolean; version?: ToolVersion }) => {
   for (const [, entry] of sessions) {
     const { server, registeredTools } = entry;
@@ -105,20 +88,14 @@ stateManager.on("tool-change", (change: { toolName: string; type: string; enable
 
     if (change.type === "toggle") {
       if (change.enabled && !existing) {
-        // Tool was enabled - register it
         const version = stateManager.state.toolVersions[change.toolName] as ToolVersion | undefined;
         const def = getToolDef(change.toolName, version);
-        if (def) {
-          const reg = registerToolOnServer(server, def);
-          registeredTools.set(change.toolName, reg);
-        }
+        if (def) registeredTools.set(change.toolName, registerToolOnServer(server, def));
       } else if (!change.enabled && existing) {
-        // Tool was disabled
         existing.remove();
         registeredTools.delete(change.toolName);
       }
     } else if (change.type === "version") {
-      // Version changed - update the tool definition
       const def = getToolDef(change.toolName, change.version);
       if (def && existing) {
         existing.update({
@@ -128,17 +105,14 @@ stateManager.on("tool-change", (change: { toolName: string; type: string; enable
           callback: async (args: Record<string, unknown>) => def.handler(args),
         });
       } else if (def && !existing && stateManager.state.enabledTools[change.toolName]) {
-        const reg = registerToolOnServer(server, def);
-        registeredTools.set(change.toolName, reg);
+        registeredTools.set(change.toolName, registerToolOnServer(server, def));
       }
     }
   }
 });
 
-// Auth mode change: disconnect all sessions
-stateManager.on("auth-change", () => {
-  disconnectAllSessions();
-});
+// Force-disconnect all sessions when auth mode changes (clients must re-auth)
+stateManager.on("auth-change", () => disconnectAllSessions());
 
 export function disconnectAllSessions() {
   for (const [sessionId, entry] of sessions) {

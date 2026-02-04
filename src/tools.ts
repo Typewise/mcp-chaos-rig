@@ -16,7 +16,6 @@ function textResult(text: string) {
 }
 
 
-// --- Echo ---
 const echoV1: ToolDef = {
   name: "echo",
   title: "Echo Message",
@@ -49,7 +48,6 @@ const echoV2: ToolDef = {
   },
 };
 
-// --- Add ---
 const addV1: ToolDef = {
   name: "add",
   title: "Add Two Numbers",
@@ -75,7 +73,6 @@ const addV2: ToolDef = {
   },
 };
 
-// --- Get Time ---
 const getTime: ToolDef = {
   name: "get-time",
   title: "Get Current Time",
@@ -84,7 +81,6 @@ const getTime: ToolDef = {
   handler: async () => { await slowModeDelay(); return textResult(new Date().toISOString()); },
 };
 
-// --- Random Number ---
 const randomNumber: ToolDef = {
   name: "random-number",
   title: "Generate Random Number",
@@ -118,7 +114,6 @@ const randomNumber: ToolDef = {
   },
 };
 
-// --- Reverse ---
 const reverse: ToolDef = {
   name: "reverse",
   title: "Reverse String",
@@ -147,13 +142,10 @@ const reverse: ToolDef = {
   },
 };
 
-// Version map for tools with variants
 const versionedTools: Record<string, Record<ToolVersion, ToolDef>> = {
   echo: { v1: echoV1, v2: echoV2 },
   add: { v1: addV1, v2: addV2 },
 };
-
-// --- Contacts (SQLite) ---
 
 const listContactsTool: ToolDef = {
   name: "list-contacts",

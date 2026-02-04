@@ -1,11 +1,17 @@
-const AUTH_PORT = window.location.port === '4100' ? 4101 : parseInt(window.location.port) + 1;
 const BASE = '';
+let BASE_URL = window.location.origin;
 
-// Populate connection URLs
-document.getElementById('url-mcp').textContent = `${window.location.origin}/mcp`;
-document.getElementById('url-oauth').textContent = `http://${window.location.hostname}:${AUTH_PORT}`;
+(async () => {
+  try {
+    const urls = await api('/api/urls');
+    BASE_URL = urls.baseUrl;
+  } catch (e) {
+    console.warn('Failed to fetch URLs, using defaults');
+  }
+  document.getElementById('url-mcp').textContent = `${BASE_URL}/mcp`;
+  document.getElementById('url-oauth').textContent = `${BASE_URL}/oauth`;
+})();
 
-// Tab switching with hash routing
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -22,11 +28,9 @@ window.addEventListener('hashchange', () => {
 });
 if (validTabs.includes(location.hash.slice(1))) switchTab(location.hash.slice(1));
 
-// State
 let currentState = null;
 let lastLogLength = 0;
 
-// Auth mode change
 document.querySelectorAll('input[name="authMode"]').forEach(radio => {
   radio.addEventListener('change', async (e) => {
     const mode = e.target.value;
@@ -47,11 +51,10 @@ function updateAuthUI(mode) {
   document.getElementById('auth-badge').textContent = 'auth: ' + mode;
   document.getElementById('auth-desc').textContent = authDescs[mode] || '';
   if (mode === 'oauth') {
-    const authBase = `http://${window.location.hostname}:${AUTH_PORT}`;
-    document.getElementById('oauth-discovery').textContent = `${authBase}/.well-known/oauth-authorization-server`;
-    document.getElementById('oauth-authorize').textContent = `${authBase}/authorize`;
-    document.getElementById('oauth-token').textContent = `${authBase}/token`;
-    document.getElementById('oauth-register').textContent = `${authBase}/register`;
+    document.getElementById('oauth-discovery').textContent = `${BASE_URL}/.well-known/oauth-authorization-server`;
+    document.getElementById('oauth-authorize').textContent = `${BASE_URL}/oauth/authorize`;
+    document.getElementById('oauth-token').textContent = `${BASE_URL}/oauth/token`;
+    document.getElementById('oauth-register').textContent = `${BASE_URL}/oauth/register`;
   }
 }
 
@@ -243,7 +246,6 @@ async function poll() {
     if (state.tools) renderTools(state.tools);
     if (log.entries) renderLog(log.entries);
 
-    // Auto-refresh contacts if that tab is active
     if (document.getElementById('tab-contacts').classList.contains('active')) {
       fetchContacts();
     }

@@ -4,10 +4,17 @@ import { getSessionCount, getSessionIds } from "./server.js";
 import { getAllToolNames, hasVersions, getToolDef } from "./tools.js";
 import { listContacts, resetDatabase } from "./db.js";
 
+const PORT = parseInt(process.env.PORT || "4100", 10);
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
 export function createApiRouter(): Router {
   const router = Router();
 
-  // Full current state
+  // Exposed for ngrok/tunnel setups so UI can show correct external URLs
+  router.get("/urls", (_req, res) => {
+    res.json({ baseUrl: BASE_URL });
+  });
+
   router.get("/state", (_req, res) => {
     const { state } = stateManager;
     const toolInfo = getAllToolNames().map((name) => ({
@@ -20,7 +27,6 @@ export function createApiRouter(): Router {
     res.json({ ...state, sessionCount: getSessionCount(), sessions: getSessionIds(), tools: toolInfo });
   });
 
-  // Switch auth mode
   router.post("/auth-mode", (req, res) => {
     const { mode } = req.body as { mode: AuthMode };
     if (!["none", "bearer", "oauth"].includes(mode)) {
@@ -31,7 +37,6 @@ export function createApiRouter(): Router {
     res.json({ authMode: mode, disconnectedSessions: true });
   });
 
-  // Update bearer token
   router.post("/bearer-token", (req, res) => {
     const { token } = req.body as { token: string };
     if (!token || typeof token !== "string") {
@@ -42,7 +47,6 @@ export function createApiRouter(): Router {
     res.json({ bearerToken: token });
   });
 
-  // Toggle tool
   router.post("/tool-toggle", (req, res) => {
     const { toolName, enabled } = req.body as { toolName: string; enabled: boolean };
     if (!stateManager.setToolEnabled(toolName, enabled)) {
@@ -52,7 +56,6 @@ export function createApiRouter(): Router {
     res.json({ toolName, enabled });
   });
 
-  // Switch tool version
   router.post("/tool-version", (req, res) => {
     const { toolName, version } = req.body as { toolName: string; version: ToolVersion };
     if (!["v1", "v2"].includes(version)) {
@@ -66,18 +69,15 @@ export function createApiRouter(): Router {
     res.json({ toolName, version });
   });
 
-  // Request log
   router.get("/log", (_req, res) => {
     res.json({ entries: stateManager.log });
   });
 
-  // Clear log
   router.post("/clear-log", (_req, res) => {
     stateManager.log = [];
     res.json({ cleared: true });
   });
 
-  // Slow mode
   router.post("/slow-mode", (req, res) => {
     const { enabled, minMs, maxMs } = req.body as { enabled?: boolean; minMs?: number; maxMs?: number };
     if (typeof enabled === "boolean") stateManager.state.slowMode = enabled;
@@ -90,7 +90,6 @@ export function createApiRouter(): Router {
     });
   });
 
-  // Flaky tools
   router.post("/flaky-tools", (req, res) => {
     const { enabled, pct } = req.body as { enabled?: boolean; pct?: number };
     if (typeof enabled === "boolean") stateManager.state.flakyTools = enabled;
@@ -101,7 +100,6 @@ export function createApiRouter(): Router {
     });
   });
 
-  // Set rejection mode for bearer or OAuth
   router.post("/reject-auth", (req, res) => {
     const { target, mode } = req.body as { target: "bearer" | "oauth"; mode: RejectMode };
     if (!["bearer", "oauth"].includes(target) || !["none", "401", "500"].includes(mode)) {
@@ -113,12 +111,10 @@ export function createApiRouter(): Router {
     res.json({ rejectBearer: stateManager.state.rejectBearer, rejectOAuth: stateManager.state.rejectOAuth });
   });
 
-  // Contacts database view
   router.get("/contacts", (_req, res) => {
     res.json({ contacts: listContacts() });
   });
 
-  // Reset contacts database to seed data
   router.post("/reset-db", (_req, res) => {
     resetDatabase();
     res.json({ reset: true });

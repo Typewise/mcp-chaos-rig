@@ -19,7 +19,6 @@ db.exec(`
   )
 `);
 
-// Seed some data if empty
 const count = db.prepare("SELECT COUNT(*) as n FROM contacts").get() as { n: number };
 if (count.n === 0) {
   const insert = db.prepare("INSERT INTO contacts (name, email, company, notes) VALUES (?, ?, ?, ?)");

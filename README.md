@@ -48,23 +48,15 @@ npm run dev
 Open the control panel at [localhost:4100/ui](http://localhost:4100/ui).
 Point your MCP client at `http://localhost:4100/mcp`.
 
----
+### Testing with your production server
 
-## How it runs
+To let your prod environment call your local Chaos Rig, expose it via a tunnel (ngrok, Cloudflare Tunnel, etc.):
 
-Two ports:
-- **4100** — MCP endpoint, web UI, control API
-- **4101** — OAuth 2.1 authorization server
+```bash
+BASE_URL=https://your-forwarder.something.dev npm run dev
+```
 
-### Authentication modes
-
-| Mode | Behavior |
-|------|----------|
-| None | All requests pass through |
-| Bearer | Requires `Authorization: Bearer test-token-123` |
-| OAuth 2.1 | Full authorization flow with interactive consent page |
-
-Bearer and OAuth modes support fault injection—force 401 or 500 responses to test error handling.
+Auth state is in-memory and doesn't survive restarts.
 
 ---
 
@@ -73,6 +65,14 @@ Bearer and OAuth modes support fault injection—force 401 or 500 responses to t
 ### Server
 
 Configure auth mode, slow mode (random latency), and flaky tools (% failure rate).
+
+| Auth mode | Behavior |
+|-----------|----------|
+| None | All requests pass through |
+| Bearer | Requires `Authorization: Bearer test-token-123` |
+| OAuth 2.1 | Full authorization flow with interactive consent page |
+
+Bearer and OAuth modes support fault injection—force 401 or 500 responses to test error handling.
 
 ### Tools
 
