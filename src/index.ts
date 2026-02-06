@@ -13,7 +13,7 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.set("trust proxy", true); // Required for rate-limiting behind ngrok/proxies
+app.set("trust proxy", 1); // Required for rate-limiting behind ngrok/proxies
 app.set("views", join(__dirname, "ui"));
 app.set("view engine", "ejs");
 app.use(express.json());
@@ -21,14 +21,17 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/ui", (_req, res) => res.render("index"));
 app.get("/favicon.svg", (_req, res) => {
-  res.type("image/svg+xml").send(readFileSync(join(__dirname, "ui", "favicon.svg"), "utf-8"));
+  res
+    .type("image/svg+xml")
+    .send(readFileSync(join(__dirname, "ui", "favicon.svg"), "utf-8"));
 });
 app.use("/api", createApiRouter());
 
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api") && req.path !== "/ui") {
     res.on("finish", () => {
-      const isOAuth = req.path.startsWith("/oauth") || req.path.includes("well-known");
+      const isOAuth =
+        req.path.startsWith("/oauth") || req.path.includes("well-known");
       const entry: import("./state.js").LogEntry = {
         timestamp: Date.now(),
         method: req.method,
@@ -44,16 +47,24 @@ app.use((req, res, next) => {
         if (body.method && typeof body.method === "string") {
           entry.rpcMethod = body.method;
           if (body.id !== undefined) entry.rpcId = body.id as string | number;
-          if (body.method === "tools/call" && body.params && typeof body.params === "object") {
+          if (
+            body.method === "tools/call" &&
+            body.params &&
+            typeof body.params === "object"
+          ) {
             const params = body.params as Record<string, unknown>;
             if (params.name) entry.toolName = String(params.name);
             if (params.arguments) {
-              try { entry.toolArgs = JSON.stringify(params.arguments); } catch {}
+              try {
+                entry.toolArgs = JSON.stringify(params.arguments);
+              } catch {}
             }
           }
         }
         if (!entry.rpcMethod && !isOAuth) {
-          try { entry.body = JSON.stringify(body); } catch {}
+          try {
+            entry.body = JSON.stringify(body);
+          } catch {}
         }
       }
       stateManager.addLogEntry(entry);
@@ -62,14 +73,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/mcp", async (_req, _res, next) => { await slowModeDelay(); next(); });
-app.use("/oauth", async (_req, _res, next) => { await slowModeDelay(); next(); });
-app.use("/.well-known", async (_req, _res, next) => { await slowModeDelay(); next(); });
+app.use("/mcp", async (_req, _res, next) => {
+  await slowModeDelay();
+  next();
+});
+app.use("/oauth", async (_req, _res, next) => {
+  await slowModeDelay();
+  next();
+});
+app.use("/.well-known", async (_req, _res, next) => {
+  await slowModeDelay();
+  next();
+});
 
 // OAuth must be mounted before MCP to handle well-known discovery
 app.use(createOAuthRouter(BASE_URL));
 
-app.use("/mcp", dynamicAuthMiddleware(() => oauthMiddleware as any));
+app.use(
+  "/mcp",
+  dynamicAuthMiddleware(() => oauthMiddleware as any),
+);
 app.all("/mcp", async (req, res) => {
   try {
     await handleMcpRequest(req as any, res as any);

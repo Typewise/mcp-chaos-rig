@@ -25,22 +25,23 @@ Run a local MCP server where you control everything:
 
 ### Test scenarios
 
-| Scenario | How to test it |
-|----------|----------------|
-| OAuth 2.1 consent flow | Use the interactive consent page: approve, decline, invalid code, tampered state |
-| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected |
-| Tool disappearing | Disable a tool in the Tools tab—clients receive `tools/changed` |
-| Tool schema changing | Switch echo or add between v1 and v2 schemas |
-| Flaky tool calls | Set failure rate 0–100%—failed calls return `isError: true` |
-| Slow responses | Enable slow mode with configurable latency range |
-| PKCE code exchange | OAuth consent page offers "Wrong Code" and "Wrong State" options |
-| Database-backed tools | CRUD operations on a real SQLite contact database |
+| Scenario                    | How to test it                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| OAuth 2.1 consent flow      | Use the interactive consent page: approve, decline, invalid code, tampered state |
+| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                    |
+| Tool disappearing           | Disable a tool in the Tools tab—clients receive `tools/changed`                  |
+| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                     |
+| Flaky tool calls            | Set failure rate 0–100%—failed calls return `isError: true`                      |
+| Slow responses              | Enable slow mode with configurable latency range                                 |
+| PKCE code exchange          | OAuth consent page offers "Wrong Code" and "Wrong State" options                 |
+| Database-backed tools       | CRUD operations on a real SQLite contact database                                |
 
 ---
 
 ## Quick start
 
 ```bash
+# tested on node 24
 npm install
 npm run dev
 ```
@@ -66,10 +67,10 @@ Auth state is in-memory and doesn't survive restarts.
 
 Configure auth mode, slow mode (random latency), and flaky tools (% failure rate).
 
-| Auth mode | Behavior |
-|-----------|----------|
-| None | All requests pass through |
-| Bearer | Requires `Authorization: Bearer test-token-123` |
+| Auth mode | Behavior                                              |
+| --------- | ----------------------------------------------------- |
+| None      | All requests pass through                             |
+| Bearer    | Requires `Authorization: Bearer test-token-123`       |
 | OAuth 2.1 | Full authorization flow with interactive consent page |
 
 Bearer and OAuth modes support fault injection—force 401 or 500 responses to test error handling.
@@ -81,6 +82,7 @@ Bearer and OAuth modes support fault injection—force 401 or 500 responses to t
 Toggle tools on/off. Disabling sends `tools/changed` to connected clients. Some tools (echo, add) support version switching.
 
 **Available tools:**
+
 - `echo` — Returns your message (v2 adds format options)
 - `add` — Sums two numbers (v2 accepts an array)
 - `get-time` — Current server time as ISO 8601
@@ -108,9 +110,9 @@ Live request log: timestamp, source (mcp/auth), method, status, JSON-RPC method,
 
 When auth mode is OAuth, the authorization endpoint shows an interactive consent page:
 
-| Button | Result |
-|--------|--------|
-| Approve | Redirects with valid authorization code |
-| Decline | Redirects with `error=access_denied` |
-| Wrong Code | Redirects with invalid code (token exchange fails) |
-| Wrong State | Redirects with tampered state parameter |
+| Button      | Result                                             |
+| ----------- | -------------------------------------------------- |
+| Approve     | Redirects with valid authorization code            |
+| Decline     | Redirects with `error=access_denied`               |
+| Wrong Code  | Redirects with invalid code (token exchange fails) |
+| Wrong State | Redirects with tampered state parameter            |
