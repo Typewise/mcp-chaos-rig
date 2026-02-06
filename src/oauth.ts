@@ -9,13 +9,48 @@ import { stateManager } from "./state.js";
 const pendingAuthorizations = new Map<string, { client: any; params: any }>();
 const oauthProvider = new DemoInMemoryAuthProvider();
 
-// Intercept token verification to support the UI's "reject OAuth" test toggle
+const originalExchange = oauthProvider.exchangeAuthorizationCode.bind(oauthProvider);
+oauthProvider.exchangeAuthorizationCode = async (client: any, authorizationCode: string, codeVerifier?: string) => {
+  const tokens = await originalExchange(client, authorizationCode, codeVerifier);
+  const ttlSecs = stateManager.state.accessTokenTtlSecs;
+  const stored = (oauthProvider as any).tokens.get(tokens.access_token);
+  if (stored) stored.expiresAt = Date.now() + ttlSecs * 1000;
+  return { ...tokens, expires_in: ttlSecs, refresh_token: randomUUID() };
+};
+
+oauthProvider.exchangeRefreshToken = async (client: any, _refreshToken: string, scopes?: string[]) => {
+  if (stateManager.state.failOAuthRefresh) {
+    throw new InvalidTokenError("Refresh token rejected (test toggle)");
+  }
+  const ttlSecs = stateManager.state.accessTokenTtlSecs;
+  const accessToken = randomUUID();
+  const resolvedScopes = scopes ?? ["mcp:tools"];
+  (oauthProvider as any).tokens.set(accessToken, {
+    token: accessToken,
+    clientId: client.client_id,
+    scopes: resolvedScopes,
+    expiresAt: Date.now() + ttlSecs * 1000,
+    type: "access",
+  });
+  return {
+    access_token: accessToken,
+    token_type: "bearer",
+    expires_in: ttlSecs,
+    scope: resolvedScopes.join(" "),
+    refresh_token: randomUUID(),
+  };
+};
+
 const originalVerify = oauthProvider.verifyAccessToken.bind(oauthProvider);
 oauthProvider.verifyAccessToken = async (token: string) => {
   const mode = stateManager.state.rejectOAuth;
   if (mode === "401") throw new InvalidTokenError("OAuth token rejected (test toggle: 401)");
   if (mode === "500") throw new Error("OAuth token rejected (test toggle: 500)");
-  return originalVerify(token);
+  try {
+    return await originalVerify(token);
+  } catch {
+    throw new InvalidTokenError("Invalid or expired token");
+  }
 };
 
 // Replace auto-approve with interactive consent page

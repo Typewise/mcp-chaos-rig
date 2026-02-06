@@ -7,6 +7,7 @@ import { handleMcpRequest } from "./server.js";
 import { createApiRouter } from "./api.js";
 import { dynamicAuthMiddleware } from "./auth.js";
 import { createOAuthRouter, oauthMiddleware } from "./oauth.js";
+import { requestLogger } from "./logger.js";
 
 const PORT = parseInt(process.env.PORT || "4100", 10);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
@@ -18,6 +19,7 @@ app.set("views", join(__dirname, "ui"));
 app.set("view engine", "ejs");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 app.get("/ui", (_req, res) => res.render("index"));
 app.get("/favicon.svg", (_req, res) => {
@@ -61,7 +63,7 @@ app.use((req, res, next) => {
             }
           }
         }
-        if (!entry.rpcMethod && !isOAuth) {
+        if (!entry.rpcMethod) {
           try {
             entry.body = JSON.stringify(body);
           } catch {}
@@ -110,6 +112,11 @@ const server = app.listen(PORT, () => {
   console.log(`  MCP endpoint:  ${BASE_URL}/mcp`);
   console.log(`  OAuth:         ${BASE_URL}/oauth`);
   console.log(`  API:           ${BASE_URL}/api/state\n`);
+});
+
+server.on("error", (err) => {
+  console.error(err);
+  process.exit(1);
 });
 
 process.on("SIGTERM", () => {

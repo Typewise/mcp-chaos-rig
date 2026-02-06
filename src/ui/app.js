@@ -85,6 +85,12 @@ async function updateSlowRange() {
   await api('/api/slow-mode', { minMs, maxMs });
 }
 
+async function updateOAuthSettings() {
+  const accessTokenTtlSecs = parseInt(document.getElementById('access-token-ttl').value) || 60;
+  const failOAuthRefresh = document.getElementById('fail-oauth-refresh').checked;
+  await api('/api/oauth-settings', { accessTokenTtlSecs, failOAuthRefresh });
+}
+
 async function toggleFlakyTools(enabled) {
   const pct = parseInt(document.getElementById('flaky-pct').value) || 0;
   await api('/api/flaky-tools', { enabled, pct });
@@ -242,6 +248,10 @@ async function poll() {
     if (flakyCb && flakyCb.checked !== state.flakyTools) flakyCb.checked = state.flakyTools;
     const flakyPct = document.getElementById('flaky-pct');
     if (flakyPct && document.activeElement !== flakyPct) flakyPct.value = state.flakyPct;
+    const ttlInput = document.getElementById('access-token-ttl');
+    if (ttlInput && document.activeElement !== ttlInput) ttlInput.value = state.accessTokenTtlSecs;
+    const failRefreshCb = document.getElementById('fail-oauth-refresh');
+    if (failRefreshCb && failRefreshCb.checked !== state.failOAuthRefresh) failRefreshCb.checked = state.failOAuthRefresh;
 
     if (state.tools) renderTools(state.tools);
     if (log.entries) renderLog(log.entries);

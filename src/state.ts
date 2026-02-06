@@ -36,6 +36,8 @@ export interface ServerState {
   slowMode: boolean;
   slowMinMs: number;
   slowMaxMs: number;
+  accessTokenTtlSecs: number;
+  failOAuthRefresh: boolean;
   flakyTools: boolean;
   flakyPct: number;
   enabledTools: Record<string, boolean>;
@@ -50,6 +52,8 @@ class StateManager extends EventEmitter {
     bearerToken: "test-token-123",
     rejectBearer: "none",
     rejectOAuth: "none",
+    accessTokenTtlSecs: 15,
+    failOAuthRefresh: false,
     slowMode: false,
     slowMinMs: 500,
     slowMaxMs: 3000,
@@ -60,7 +64,7 @@ class StateManager extends EventEmitter {
       add: true,
       "get-time": false,
       "random-number": false,
-      "reverse": false,
+      reverse: false,
       "list-contacts": true,
       "search-contacts": true,
       "create-contact": true,
@@ -104,7 +108,6 @@ class StateManager extends EventEmitter {
       this.log = this.log.slice(-MAX_LOG_ENTRIES);
     }
   }
-
 }
 
 export const stateManager = new StateManager();
@@ -112,6 +115,7 @@ export const stateManager = new StateManager();
 export async function slowModeDelay() {
   if (!stateManager.state.slowMode) return;
   const { slowMinMs, slowMaxMs } = stateManager.state;
-  const ms = Math.floor(Math.random() * (slowMaxMs - slowMinMs + 1)) + slowMinMs;
+  const ms =
+    Math.floor(Math.random() * (slowMaxMs - slowMinMs + 1)) + slowMinMs;
   await new Promise((r) => setTimeout(r, ms));
 }

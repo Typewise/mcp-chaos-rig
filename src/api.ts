@@ -111,6 +111,23 @@ export function createApiRouter(): Router {
     res.json({ rejectBearer: stateManager.state.rejectBearer, rejectOAuth: stateManager.state.rejectOAuth });
   });
 
+  router.post("/oauth-settings", (req, res) => {
+    const { accessTokenTtlSecs, failOAuthRefresh } = req.body as {
+      accessTokenTtlSecs?: number;
+      failOAuthRefresh?: boolean;
+    };
+    if (typeof accessTokenTtlSecs === "number") {
+      stateManager.state.accessTokenTtlSecs = Math.max(1, Math.floor(accessTokenTtlSecs));
+    }
+    if (typeof failOAuthRefresh === "boolean") {
+      stateManager.state.failOAuthRefresh = failOAuthRefresh;
+    }
+    res.json({
+      accessTokenTtlSecs: stateManager.state.accessTokenTtlSecs,
+      failOAuthRefresh: stateManager.state.failOAuthRefresh,
+    });
+  });
+
   router.get("/contacts", (_req, res) => {
     res.json({ contacts: listContacts() });
   });

@@ -79,6 +79,19 @@
               <label><input type="radio" name="rejectOAuth" value="401" onchange="setRejectAuth('oauth', this.value)"> 401 (invalid token)</label>
               <label><input type="radio" name="rejectOAuth" value="500" onchange="setRejectAuth('oauth', this.value)"> 500 (server error)</label>
             </div>
+            <h3>Access Token TTL</h3>
+            <div style="display:flex; gap:8px; align-items:center">
+              <input type="number" id="access-token-ttl" value="60" min="1" style="width:80px" onchange="updateOAuthSettings()">
+              <span style="color:#8b949e">seconds</span>
+            </div>
+            <h3>Refresh Tokens</h3>
+            <div class="tool-row">
+              <label class="toggle">
+                <input type="checkbox" id="fail-oauth-refresh" onchange="updateOAuthSettings()">
+                <span class="slider"></span>
+              </label>
+              <span>Reject refresh tokens</span>
+            </div>
             <h3>OAuth Endpoints</h3>
             <div style="margin:4px 0"><strong>Discovery:</strong></div>
             <div class="url-display" id="oauth-discovery"></div>

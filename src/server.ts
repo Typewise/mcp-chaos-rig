@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { logOutboundMessage } from "./logger.js";
 import { stateManager } from "./state.js";
 import { getActiveTools, getToolDef, type ToolDef } from "./tools.js";
 import type { ToolVersion } from "./state.js";
@@ -75,6 +76,11 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
 
   const newSessionId = entry.transport.sessionId;
   if (newSessionId) {
+    const origSend = entry.transport.send.bind(entry.transport);
+    entry.transport.send = async (message, options) => {
+      logOutboundMessage(message as Record<string, unknown>, newSessionId);
+      return origSend(message, options);
+    };
     sessions.set(newSessionId, entry);
     entry.transport.onclose = () => sessions.delete(newSessionId);
   }
