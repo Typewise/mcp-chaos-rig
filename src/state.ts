@@ -26,8 +26,6 @@ export interface LogEntry {
   query?: string;
   /** Stringified request body (non-MCP requests) */
   body?: string;
-  /** Direction: inbound request or outbound response */
-  direction?: "in" | "out";
 }
 
 export interface ServerState {

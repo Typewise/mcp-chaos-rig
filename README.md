@@ -4,22 +4,22 @@
 
 <h1 align="center">MCP Chaos Rig</h1>
 
-<p align="center">A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and schema changes—all from a web UI.</p>
+<p align="center">A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry, all from a web UI.</p>
 
 ---
 
 ## The problem
 
-You're building an MCP client. You need to test OAuth flows, tool discovery, error handling, and session lifecycle. Production servers don't fail on command. You need a server that does.
+You're building an MCP client. You need to test OAuth flows, token refresh, tool discovery, error handling, and session lifecycle. Production servers don't fail on command. You need a server that does.
 
 ## What Chaos Rig does
 
 Run a local MCP server where you control everything:
 
-- **Break authentication** — Force 401s and 500s mid-session, even on valid tokens
-- **Break tools** — Disable tools to trigger `tools/changed`, switch schema versions live
-- **Break reliability** — Add random latency, make tool calls fail at configurable rates
-- **See everything** — Live request log shows JSON-RPC methods, tool args, session IDs
+- **Break authentication**: force 401s and 500s mid-session, expire tokens on demand, reject refresh tokens
+- **Break tools**: disable tools to trigger `tools/changed`, switch schema versions live
+- **Break reliability**: add random latency, make tool calls fail at configurable rates
+- **See everything**: live request log shows inbound JSON-RPC calls and outbound SSE responses, with click-to-expand bodies
 
 ![Server tab](docs/server-tab.png)
 
@@ -28,10 +28,12 @@ Run a local MCP server where you control everything:
 | Scenario                    | How to test it                                                                   |
 | --------------------------- | -------------------------------------------------------------------------------- |
 | OAuth 2.1 consent flow      | Use the interactive consent page: approve, decline, invalid code, tampered state |
-| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                    |
-| Tool disappearing           | Disable a tool in the Tools tab—clients receive `tools/changed`                  |
-| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                     |
-| Flaky tool calls            | Set failure rate 0–100%—failed calls return `isError: true`                      |
+| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                   |
+| Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                  |
+| Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                        |
+| Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                 |
+| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                    |
+| Flaky tool calls            | Set failure rate 0-100%. Failed calls return `isError: true`                     |
 | Slow responses              | Enable slow mode with configurable latency range                                 |
 | PKCE code exchange          | OAuth consent page offers "Wrong Code" and "Wrong State" options                 |
 | Database-backed tools       | CRUD operations on a real SQLite contact database                                |
@@ -57,7 +59,7 @@ To let your prod environment call your local Chaos Rig, expose it via a tunnel (
 BASE_URL=https://your-forwarder.something.dev npm run dev
 ```
 
-Auth state is in-memory and doesn't survive restarts.
+All auth state lives in memory and resets on restart. Bearer mode always starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens are validated against an in-memory store and expire based on the TTL you configure. Refresh tokens are not tracked — any value is accepted and produces a fresh access token. Use the "Reject refresh tokens" toggle to test failure scenarios.
 
 ---
 
@@ -73,7 +75,9 @@ Configure auth mode, slow mode (random latency), and flaky tools (% failure rate
 | Bearer    | Requires `Authorization: Bearer test-token-123`       |
 | OAuth 2.1 | Full authorization flow with interactive consent page |
 
-Bearer and OAuth modes support fault injection—force 401 or 500 responses to test error handling.
+Bearer and OAuth modes support fault injection: force 401 or 500 responses to test error handling.
+
+OAuth mode adds controls for access token TTL and refresh token rejection. OAuth endpoints are listed in a collapsible section.
 
 ### Tools
 
@@ -83,12 +87,12 @@ Toggle tools on/off. Disabling sends `tools/changed` to connected clients. Some 
 
 **Available tools:**
 
-- `echo` — Returns your message (v2 adds format options)
-- `add` — Sums two numbers (v2 accepts an array)
-- `get-time` — Current server time as ISO 8601
-- `random-number` — Random integer in a range
-- `reverse` — Reverses a string
-- `list-contacts`, `search-contacts`, `create-contact`, `update-contact`, `delete-contact` — SQLite CRUD
+- `echo`: returns your message (v2 adds format options)
+- `add`: sums two numbers (v2 accepts an array)
+- `get-time`: current server time as ISO 8601
+- `random-number`: random integer in a range
+- `reverse`: reverses a string
+- `list-contacts`, `search-contacts`, `create-contact`, `update-contact`, `delete-contact`: SQLite CRUD
 
 ### Contacts
 
@@ -100,7 +104,7 @@ View and reset the SQLite database backing the contact tools. Starts with three 
 
 ![Log tab](docs/log-tab.png)
 
-Live request log: timestamp, source (mcp/auth), method, status, JSON-RPC method, tool name, arguments. Keeps last 200 entries.
+Live request log showing inbound requests and outbound SSE responses. Displays timestamp, source (mcp/auth/sse), method, status, JSON-RPC method, tool name, and arguments. Click any truncated body or args line to expand it. Keeps last 200 entries.
 
 ---
 

@@ -86,7 +86,6 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
         path: "/mcp",
         sessionId: newSessionId,
         source: "sse",
-        direction: "out",
       };
       if (msg.method && typeof msg.method === "string") logEntry.rpcMethod = msg.method;
       if (msg.id !== undefined) logEntry.rpcId = msg.id as string | number;
