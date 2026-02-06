@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { logOutboundMessage } from "./logger.js";
-import { stateManager } from "./state.js";
+import { stateManager, type LogEntry } from "./state.js";
 import { getActiveTools, getToolDef, type ToolDef } from "./tools.js";
 import type { ToolVersion } from "./state.js";
 
@@ -78,7 +78,22 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
   if (newSessionId) {
     const origSend = entry.transport.send.bind(entry.transport);
     entry.transport.send = async (message, options) => {
-      logOutboundMessage(message as Record<string, unknown>, newSessionId);
+      const msg = message as Record<string, unknown>;
+      logOutboundMessage(msg, newSessionId);
+      const logEntry: LogEntry = {
+        timestamp: Date.now(),
+        method: "SSE",
+        path: "/mcp",
+        sessionId: newSessionId,
+        source: "sse",
+        direction: "out",
+      };
+      if (msg.method && typeof msg.method === "string") logEntry.rpcMethod = msg.method;
+      if (msg.id !== undefined) logEntry.rpcId = msg.id as string | number;
+      if (msg.result !== undefined) logEntry.rpcMethod = "result";
+      if (msg.error !== undefined) logEntry.rpcMethod = "error";
+      try { logEntry.body = JSON.stringify(msg); } catch {}
+      stateManager.addLogEntry(logEntry);
       return origSend(message, options);
     };
     sessions.set(newSessionId, entry);

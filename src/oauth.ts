@@ -129,14 +129,20 @@ export function createOAuthRouter(baseUrl: string): Router {
   router.get("/oauth/.well-known/oauth-authorization-server", serveAuthServerMetadata);
   router.get("/oauth/.well-known/openid-configuration", serveAuthServerMetadata);
 
-  // Mounted at both /oauth and / because some clients strip the path prefix
+  function requireOAuthActive(_req: any, res: any, next: any) {
+    if (stateManager.state.authMode !== "oauth") {
+      res.status(404).json({ error: "OAuth not active" });
+      return;
+    }
+    next();
+  }
+
   const sdkAuthRouter = mcpAuthRouter({
     provider: oauthProvider,
     issuerUrl: new URL(`${baseUrl}/oauth`),
     scopesSupported: ["mcp:tools"],
   });
-  router.use("/oauth", sdkAuthRouter);
-  router.use("/", sdkAuthRouter);
+  router.use("/oauth", requireOAuthActive, sdkAuthRouter);
 
   function handleAuthorizeDecision(req: any, res: any) {
     const { id, action } = req.body as { id: string; action: string };
@@ -188,8 +194,8 @@ export function createOAuthRouter(baseUrl: string): Router {
 
     res.status(400).json({ error: "Unknown action" });
   }
-  router.post("/oauth/authorize-decision", handleAuthorizeDecision);
-  router.post("/authorize-decision", handleAuthorizeDecision);
+  router.post("/oauth/authorize-decision", requireOAuthActive, handleAuthorizeDecision);
+  router.post("/authorize-decision", requireOAuthActive, handleAuthorizeDecision);
 
   async function handleIntrospect(req: any, res: any) {
     try {
@@ -209,8 +215,8 @@ export function createOAuthRouter(baseUrl: string): Router {
       res.status(401).json({ active: false });
     }
   }
-  router.post("/oauth/introspect", handleIntrospect);
-  router.post("/introspect", handleIntrospect);
+  router.post("/oauth/introspect", requireOAuthActive, handleIntrospect);
+  router.post("/introspect", requireOAuthActive, handleIntrospect);
 
   return router;
 }

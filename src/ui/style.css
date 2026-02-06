@@ -68,6 +68,7 @@
   .log-source { font-size: 10px; padding: 0 4px; border-radius: 3px; font-weight: 600; }
   .log-source.mcp { color: #d2a8ff; }
   .log-source.auth { color: #f0883e; }
+  .log-source.sse { color: #79c0ff; }
   .log-status { min-width: 24px; text-align: right; }
   .log-status.s2xx { color: #3fb950; }
   .log-status.s3xx { color: #d2a8ff; }
@@ -75,7 +76,8 @@
   .log-status.s5xx { color: #f85149; }
   .log-rpc { color: #79c0ff; font-weight: 600; }
   .log-tool { color: #d2a8ff; }
-  .log-args { color: #6e7681; font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-basis: 100%; padding-left: 60px; }
+  .log-args { color: #6e7681; font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-basis: 100%; padding-left: 60px; cursor: pointer; }
+  .log-args.expanded { white-space: pre-wrap; word-break: break-all; text-overflow: unset; }
 
   /* URLs */
   .url-display { background: #0d1117; border: 1px solid #21262d; padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #8b949e; word-break: break-all; margin: 4px 0; }

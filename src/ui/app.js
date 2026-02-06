@@ -9,7 +9,6 @@ let BASE_URL = window.location.origin;
     console.warn('Failed to fetch URLs, using defaults');
   }
   document.getElementById('url-mcp').textContent = `${BASE_URL}/mcp`;
-  document.getElementById('url-oauth').textContent = `${BASE_URL}/oauth`;
 })();
 
 function switchTab(name) {
@@ -30,6 +29,7 @@ if (validTabs.includes(location.hash.slice(1))) switchTab(location.hash.slice(1)
 
 let currentState = null;
 let lastLogLength = 0;
+
 
 document.querySelectorAll('input[name="authMode"]').forEach(radio => {
   radio.addEventListener('change', async (e) => {
@@ -148,6 +148,10 @@ function renderLog(entries) {
       if (entry.toolName) {
         rpcHtml += `<span class="log-tool">${esc(entry.toolName)}</span>`;
       }
+    } else if (entry.source === 'sse') {
+      const label = entry.rpcMethod || 'message';
+      rpcHtml = `<span class="log-rpc">${esc(label)}</span>`;
+      if (entry.rpcId !== undefined) rpcHtml += `<span class="log-args" onclick="this.classList.toggle('expanded')">id=${esc(entry.rpcId)}</span>`;
     } else if (entry.source === 'mcp' && entry.method === 'DELETE') {
       rpcHtml = `<span class="log-rpc" style="color:#8b949e">session close</span>`;
     } else if (entry.source === 'mcp' && entry.method === 'GET') {
@@ -155,14 +159,14 @@ function renderLog(entries) {
     }
     let argsHtml = '';
     if (entry.toolArgs) {
-      argsHtml = `<span class="log-args" title="${esc(entry.toolArgs)}">${esc(entry.toolArgs)}</span>`;
+      argsHtml = `<span class="log-args" onclick="this.classList.toggle('expanded')" title="${esc(entry.toolArgs)}">${esc(entry.toolArgs)}</span>`;
     }
     let extraHtml = '';
     if (entry.query) {
-      extraHtml += `<span class="log-args" title="${esc(entry.query)}"><span style="color:#8b949e">?</span>${esc(entry.query)}</span>`;
+      extraHtml += `<span class="log-args" onclick="this.classList.toggle('expanded')" title="${esc(entry.query)}"><span style="color:#8b949e">?</span>${esc(entry.query)}</span>`;
     }
     if (entry.body) {
-      extraHtml += `<span class="log-args" title="${esc(entry.body)}"><span style="color:#8b949e">body:</span> ${esc(entry.body)}</span>`;
+      extraHtml += `<span class="log-args" onclick="this.classList.toggle('expanded')" title="${esc(entry.body)}"><span style="color:#8b949e">body:</span> ${esc(entry.body)}</span>`;
     }
     div.innerHTML = `
       <span class="log-time">${time}</span>

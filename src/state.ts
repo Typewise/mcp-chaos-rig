@@ -12,7 +12,7 @@ export interface LogEntry {
   method: string;
   path: string;
   sessionId?: string;
-  source?: "mcp" | "auth";
+  source?: "mcp" | "auth" | "sse";
   status?: number;
   /** JSON-RPC method name (e.g. "tools/call", "initialize") */
   rpcMethod?: string;
@@ -26,6 +26,8 @@ export interface LogEntry {
   query?: string;
   /** Stringified request body (non-MCP requests) */
   body?: string;
+  /** Direction: inbound request or outbound response */
+  direction?: "in" | "out";
 }
 
 export interface ServerState {

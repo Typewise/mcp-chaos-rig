@@ -3,13 +3,8 @@
     <div class="grid-2">
       <div>
         <div class="card">
-          <h2>Connection URLs</h2>
-          <div class="section">
-            <div style="margin:4px 0"><strong>MCP endpoint:</strong></div>
-            <div class="url-display" id="url-mcp"></div>
-            <div style="margin:4px 0"><strong>Auth server:</strong></div>
-            <div class="url-display" id="url-oauth"></div>
-          </div>
+          <h2>MCP Endpoint</h2>
+          <div class="url-display" id="url-mcp" style="font-size:16px; padding:12px"></div>
         </div>
 
         <div class="card">
@@ -62,26 +57,28 @@
 
           <div class="section" id="bearer-config" style="display:none">
             <h3>Bearer Token</h3>
-            <input type="text" id="bearer-token" value="test-token-123" placeholder="Enter bearer token">
-            <button style="margin-top:8px" onclick="updateBearerToken()">Update Token</button>
+            <div style="display:flex; gap:8px; align-items:center">
+              <input type="text" id="bearer-token" value="test-token-123" placeholder="Enter bearer token" style="flex:1">
+              <button onclick="updateBearerToken()">Update</button>
+            </div>
             <h3>Token Validation</h3>
-            <div style="display:flex; gap:12px; align-items:center">
-              <label><input type="radio" name="rejectBearer" value="none" checked onchange="setRejectAuth('bearer', this.value)"> Accept</label>
-              <label><input type="radio" name="rejectBearer" value="401" onchange="setRejectAuth('bearer', this.value)"> 401 (invalid token)</label>
-              <label><input type="radio" name="rejectBearer" value="500" onchange="setRejectAuth('bearer', this.value)"> 500 (server error)</label>
+            <div style="display:flex; flex-direction:column; gap:6px">
+              <label><input type="radio" name="rejectBearer" value="none" checked onchange="setRejectAuth('bearer', this.value)"> Accept if valid</label>
+              <label><input type="radio" name="rejectBearer" value="401" onchange="setRejectAuth('bearer', this.value)"> 401 — invalid token</label>
+              <label><input type="radio" name="rejectBearer" value="500" onchange="setRejectAuth('bearer', this.value)"> 500 — server error</label>
             </div>
           </div>
 
           <div class="section" id="oauth-config" style="display:none">
-            <h3>Token Validation</h3>
-            <div style="display:flex; gap:12px; align-items:center">
-              <label><input type="radio" name="rejectOAuth" value="none" checked onchange="setRejectAuth('oauth', this.value)"> Accept</label>
-              <label><input type="radio" name="rejectOAuth" value="401" onchange="setRejectAuth('oauth', this.value)"> 401 (invalid token)</label>
-              <label><input type="radio" name="rejectOAuth" value="500" onchange="setRejectAuth('oauth', this.value)"> 500 (server error)</label>
+            <h3>Access Tokens</h3>
+            <div style="display:flex; flex-direction:column; gap:6px">
+              <label><input type="radio" name="rejectOAuth" value="none" checked onchange="setRejectAuth('oauth', this.value)"> Accept if valid</label>
+              <label><input type="radio" name="rejectOAuth" value="401" onchange="setRejectAuth('oauth', this.value)"> 401 — invalid token</label>
+              <label><input type="radio" name="rejectOAuth" value="500" onchange="setRejectAuth('oauth', this.value)"> 500 — server error</label>
             </div>
-            <h3>Access Token TTL</h3>
-            <div style="display:flex; gap:8px; align-items:center">
-              <input type="number" id="access-token-ttl" value="60" min="1" style="width:80px" onchange="updateOAuthSettings()">
+            <div style="display:flex; gap:8px; margin-top:8px; align-items:center">
+              <span style="color:#8b949e">TTL</span>
+              <input type="number" id="access-token-ttl" value="60" min="1" style="width:64px" onchange="updateOAuthSettings()">
               <span style="color:#8b949e">seconds</span>
             </div>
             <h3>Refresh Tokens</h3>
@@ -92,15 +89,19 @@
               </label>
               <span>Reject refresh tokens</span>
             </div>
-            <h3>OAuth Endpoints</h3>
-            <div style="margin:4px 0"><strong>Discovery:</strong></div>
-            <div class="url-display" id="oauth-discovery"></div>
-            <div style="margin:4px 0"><strong>Authorize:</strong></div>
-            <div class="url-display" id="oauth-authorize"></div>
-            <div style="margin:4px 0"><strong>Token:</strong></div>
-            <div class="url-display" id="oauth-token"></div>
-            <div style="margin:4px 0"><strong>Register:</strong></div>
-            <div class="url-display" id="oauth-register"></div>
+            <details style="margin-top:12px">
+              <summary style="color:#8b949e; cursor:pointer; font-size:12px">Endpoints</summary>
+              <div style="margin-top:8px">
+                <div style="margin:4px 0"><strong>Discovery:</strong></div>
+                <div class="url-display" id="oauth-discovery"></div>
+                <div style="margin:4px 0"><strong>Authorize:</strong></div>
+                <div class="url-display" id="oauth-authorize"></div>
+                <div style="margin:4px 0"><strong>Token:</strong></div>
+                <div class="url-display" id="oauth-token"></div>
+                <div style="margin:4px 0"><strong>Register:</strong></div>
+                <div class="url-display" id="oauth-register"></div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
