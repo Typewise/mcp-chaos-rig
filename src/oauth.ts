@@ -218,5 +218,19 @@ export function createOAuthRouter(baseUrl: string): Router {
   router.post("/oauth/introspect", requireOAuthActive, handleIntrospect);
   router.post("/introspect", requireOAuthActive, handleIntrospect);
 
+  // SDK falls back to POST /register at root when discovery fails.
+  // Without this, Express returns HTML 404 which breaks parseErrorResponse.
+  router.post("/register", (req, res) => {
+    if (stateManager.state.authMode === "oauth") {
+      return sdkAuthRouter(req, res, () => {
+        res.status(404).json({ error: "not_found" });
+      });
+    }
+    res.status(400).json({
+      error: "invalid_request",
+      error_description: `OAuth is not active (current mode: ${stateManager.state.authMode}). Switch via POST /api/auth-mode {"mode":"oauth"}`,
+    });
+  });
+
   return router;
 }
