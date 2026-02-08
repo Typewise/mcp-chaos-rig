@@ -6,6 +6,12 @@
 
 <p align="center">A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry, all from a web UI.</p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/mcp-chaos-rig"><img src="https://img.shields.io/npm/v/mcp-chaos-rig.svg" alt="npm version"></a>
+  <a href="https://github.com/Typewise/mcp-chaos-rig/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/mcp-chaos-rig.svg" alt="license"></a>
+  <a href="https://www.npmjs.com/package/mcp-chaos-rig"><img src="https://img.shields.io/npm/dm/mcp-chaos-rig.svg" alt="downloads"></a>
+</p>
+
 ---
 
 ## The problem
@@ -28,11 +34,11 @@ Run a local MCP server where you control everything:
 | Scenario                    | How to test it                                                                   |
 | --------------------------- | -------------------------------------------------------------------------------- |
 | OAuth 2.1 consent flow      | Use the interactive consent page: approve, decline, invalid code, tampered state |
-| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                   |
+| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                    |
 | Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                  |
 | Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                        |
 | Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                 |
-| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                    |
+| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                     |
 | Flaky tool calls            | Set failure rate 0-100%. Failed calls return `isError: true`                     |
 | Slow responses              | Enable slow mode with configurable latency range                                 |
 | PKCE code exchange          | OAuth consent page offers "Wrong Code" and "Wrong State" options                 |
@@ -43,23 +49,38 @@ Run a local MCP server where you control everything:
 ## Quick start
 
 ```bash
-# tested on node 24
+npx mcp-chaos-rig
+```
+
+Control panel at [localhost:4100/ui](http://localhost:4100/ui), MCP endpoint at `http://localhost:4100/mcp`. Requires Node 20+.
+
+If you prefer a global install:
+
+```bash
+npm install -g mcp-chaos-rig
+mcp-chaos-rig
+```
+
+Or run from source:
+
+```bash
+git clone https://github.com/Typewise/mcp-chaos-rig.git
+cd mcp-chaos-rig
 npm install
 npm run dev
 ```
 
-Open the control panel at [localhost:4100/ui](http://localhost:4100/ui).
-Point your MCP client at `http://localhost:4100/mcp`.
+### Remote access
 
-### Testing with your production server
-
-To let your prod environment call your local Chaos Rig, expose it via a tunnel (ngrok, Cloudflare Tunnel, etc.):
+If your production environment needs to reach Chaos Rig, expose it via a tunnel (ngrok, Cloudflare Tunnel, etc.) and set `BASE_URL` so OAuth redirects resolve correctly:
 
 ```bash
-BASE_URL=https://your-forwarder.something.dev npm run dev
+BASE_URL=https://your-tunnel.example.dev npx mcp-chaos-rig
 ```
 
-All auth state lives in memory and resets on restart. Bearer mode always starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens are validated against an in-memory store and expire based on the TTL you configure. Refresh tokens are not tracked — any value is accepted and produces a fresh access token. Use the "Reject refresh tokens" toggle to test failure scenarios.
+### Auth state
+
+All auth state lives in memory and resets on restart. Bearer mode starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens expire based on the TTL you configure. Refresh tokens are not tracked — any value produces a fresh access token. Use the "Reject refresh tokens" toggle to test failure scenarios.
 
 ---
 
@@ -120,3 +141,11 @@ When auth mode is OAuth, the authorization endpoint shows an interactive consent
 | Decline     | Redirects with `error=access_denied`               |
 | Wrong Code  | Redirects with invalid code (token exchange fails) |
 | Wrong State | Redirects with tampered state parameter            |
+
+---
+
+## Links
+
+- [npm package](https://www.npmjs.com/package/mcp-chaos-rig)
+- [GitHub repository](https://github.com/Typewise/mcp-chaos-rig)
+- [MIT License](LICENSE)

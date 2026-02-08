@@ -1,10 +1,45 @@
 {
-  "name": "mcp-test-server",
+  "name": "mcp-chaos-rig",
   "version": "1.0.0",
+  "description": "A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry.",
   "type": "module",
+  "license": "MIT",
+  "author": "Typewise AG",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Typewise/mcp-chaos-rig.git"
+  },
+  "homepage": "https://github.com/Typewise/mcp-chaos-rig",
+  "bugs": {
+    "url": "https://github.com/Typewise/mcp-chaos-rig/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "testing",
+    "chaos-engineering",
+    "oauth",
+    "developer-tools",
+    "fault-injection"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "mcp-chaos-rig": "bin/mcp-chaos-rig.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "build": "rm -rf dist && tsc && cp -r src/ui dist/ui",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",

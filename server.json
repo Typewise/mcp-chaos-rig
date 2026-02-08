@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "com.typewise/mcp-chaos-rig",
+  "version": "1.0.0",
+  "title": "MCP Chaos Rig",
+  "description": "A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry, all from a web UI.",
+  "websiteUrl": "https://github.com/Typewise/mcp-chaos-rig",
+  "repository": {
+    "url": "https://github.com/Typewise/mcp-chaos-rig"
+  },
+  "packages": {
+    "npm": {
+      "name": "mcp-chaos-rig"
+    }
+  }
+}
