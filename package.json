@@ -1,6 +1,6 @@
 {
   "name": "mcp-chaos-rig",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry.",
   "type": "module",
   "license": "MIT",
