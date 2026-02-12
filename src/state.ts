@@ -38,6 +38,7 @@ export interface ServerState {
   slowMaxMs: number;
   accessTokenTtlSecs: number;
   failOAuthRefresh: boolean;
+  strictRefreshTokens: boolean;
   flakyTools: boolean;
   flakyPct: number;
   enabledTools: Record<string, boolean>;
@@ -54,6 +55,7 @@ class StateManager extends EventEmitter {
     rejectOAuth: "none",
     accessTokenTtlSecs: 15,
     failOAuthRefresh: false,
+    strictRefreshTokens: false,
     slowMode: false,
     slowMinMs: 500,
     slowMaxMs: 3000,

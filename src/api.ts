@@ -112,9 +112,10 @@ export function createApiRouter(): Router {
   });
 
   router.post("/oauth-settings", (req, res) => {
-    const { accessTokenTtlSecs, failOAuthRefresh } = req.body as {
+    const { accessTokenTtlSecs, failOAuthRefresh, strictRefreshTokens } = req.body as {
       accessTokenTtlSecs?: number;
       failOAuthRefresh?: boolean;
+      strictRefreshTokens?: boolean;
     };
     if (typeof accessTokenTtlSecs === "number") {
       stateManager.state.accessTokenTtlSecs = Math.max(1, Math.floor(accessTokenTtlSecs));
@@ -122,9 +123,13 @@ export function createApiRouter(): Router {
     if (typeof failOAuthRefresh === "boolean") {
       stateManager.state.failOAuthRefresh = failOAuthRefresh;
     }
+    if (typeof strictRefreshTokens === "boolean") {
+      stateManager.state.strictRefreshTokens = strictRefreshTokens;
+    }
     res.json({
       accessTokenTtlSecs: stateManager.state.accessTokenTtlSecs,
       failOAuthRefresh: stateManager.state.failOAuthRefresh,
+      strictRefreshTokens: stateManager.state.strictRefreshTokens,
     });
   });
 

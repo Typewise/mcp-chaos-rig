@@ -89,6 +89,14 @@
               </label>
               <span>Reject refresh tokens</span>
             </div>
+            <div class="tool-row">
+              <label class="toggle">
+                <input type="checkbox" id="strict-refresh-tokens" onchange="updateOAuthSettings()">
+                <span class="slider"></span>
+              </label>
+              <span>Enforce refresh token ownership</span>
+              <span style="color:#8b949e; font-size:12px; margin-left:4px">Only the client that received a token can use it to refresh</span>
+            </div>
             <details style="margin-top:12px">
               <summary style="color:#8b949e; cursor:pointer; font-size:12px">Endpoints</summary>
               <div style="margin-top:8px">

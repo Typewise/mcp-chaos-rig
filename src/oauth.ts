@@ -3,11 +3,14 @@ import { randomUUID } from "node:crypto";
 import { DemoInMemoryAuthProvider } from "@modelcontextprotocol/sdk/examples/server/demoInMemoryOAuthProvider.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
-import { InvalidTokenError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
+import { InvalidTokenError, InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import { stateManager } from "./state.js";
 
 const pendingAuthorizations = new Map<string, { client: any; params: any }>();
 const oauthProvider = new DemoInMemoryAuthProvider();
+
+// Tracks which client_id owns each refresh token (for strict mode)
+const refreshTokenOwners = new Map<string, string>();
 
 const originalExchange = oauthProvider.exchangeAuthorizationCode.bind(oauthProvider);
 oauthProvider.exchangeAuthorizationCode = async (client: any, authorizationCode: string, codeVerifier?: string) => {
@@ -15,13 +18,29 @@ oauthProvider.exchangeAuthorizationCode = async (client: any, authorizationCode:
   const ttlSecs = stateManager.state.accessTokenTtlSecs;
   const stored = (oauthProvider as any).tokens.get(tokens.access_token);
   if (stored) stored.expiresAt = Date.now() + ttlSecs * 1000;
-  return { ...tokens, expires_in: ttlSecs, refresh_token: randomUUID() };
+  const refreshToken = randomUUID();
+  refreshTokenOwners.set(refreshToken, client.client_id);
+  return { ...tokens, expires_in: ttlSecs, refresh_token: refreshToken };
 };
 
-oauthProvider.exchangeRefreshToken = async (client: any, _refreshToken: string, scopes?: string[]) => {
+oauthProvider.exchangeRefreshToken = async (client: any, refreshToken: string, scopes?: string[]) => {
   if (stateManager.state.failOAuthRefresh) {
     throw new InvalidTokenError("Refresh token rejected (test toggle)");
   }
+
+  if (stateManager.state.strictRefreshTokens) {
+    const owner = refreshTokenOwners.get(refreshToken);
+    if (!owner) {
+      throw new InvalidGrantError("Unknown refresh token");
+    }
+    if (owner !== client.client_id) {
+      throw new InvalidGrantError(
+        `Refresh token belongs to client [${owner}], not [${client.client_id}]`
+      );
+    }
+    refreshTokenOwners.delete(refreshToken);
+  }
+
   const ttlSecs = stateManager.state.accessTokenTtlSecs;
   const accessToken = randomUUID();
   const resolvedScopes = scopes ?? ["mcp:tools"];
@@ -32,12 +51,14 @@ oauthProvider.exchangeRefreshToken = async (client: any, _refreshToken: string, 
     expiresAt: Date.now() + ttlSecs * 1000,
     type: "access",
   });
+  const newRefreshToken = randomUUID();
+  refreshTokenOwners.set(newRefreshToken, client.client_id);
   return {
     access_token: accessToken,
     token_type: "bearer",
     expires_in: ttlSecs,
     scope: resolvedScopes.join(" "),
-    refresh_token: randomUUID(),
+    refresh_token: newRefreshToken,
   };
 };
 

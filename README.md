@@ -37,6 +37,7 @@ Run a local MCP server where you control everything:
 | Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                    |
 | Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                  |
 | Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                        |
+| Wrong client refreshing     | Enable "Enforce refresh token ownership" — catches clients that lose credentials and re-register |
 | Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                 |
 | Tool schema changing        | Switch echo or add between v1 and v2 schemas                                     |
 | Flaky tool calls            | Set failure rate 0-100%. Failed calls return `isError: true`                     |
@@ -80,7 +81,7 @@ BASE_URL=https://your-tunnel.example.dev npx mcp-chaos-rig
 
 ### Auth state
 
-All auth state lives in memory and resets on restart. Bearer mode starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens expire based on the TTL you configure. Refresh tokens are not tracked — any value produces a fresh access token. Use the "Reject refresh tokens" toggle to test failure scenarios.
+All auth state lives in memory and resets on restart. Bearer mode starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens expire based on the TTL you configure. Refresh tokens are tracked per client when "Enforce refresh token ownership" is enabled — a token can only be refreshed by the client that received it. After a restart, do one refresh with ownership off to re-seed the tracking, then turn it on.
 
 ---
 
@@ -98,7 +99,7 @@ Configure auth mode, slow mode (random latency), and flaky tools (% failure rate
 
 Bearer and OAuth modes support fault injection: force 401 or 500 responses to test error handling.
 
-OAuth mode adds controls for access token TTL and refresh token rejection. OAuth endpoints are listed in a collapsible section.
+OAuth mode adds controls for access token TTL, refresh token rejection, and refresh token ownership enforcement. OAuth endpoints are listed in a collapsible section.
 
 ### Tools
 

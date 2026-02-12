@@ -88,7 +88,8 @@ async function updateSlowRange() {
 async function updateOAuthSettings() {
   const accessTokenTtlSecs = parseInt(document.getElementById('access-token-ttl').value) || 60;
   const failOAuthRefresh = document.getElementById('fail-oauth-refresh').checked;
-  await api('/api/oauth-settings', { accessTokenTtlSecs, failOAuthRefresh });
+  const strictRefreshTokens = document.getElementById('strict-refresh-tokens').checked;
+  await api('/api/oauth-settings', { accessTokenTtlSecs, failOAuthRefresh, strictRefreshTokens });
 }
 
 async function toggleFlakyTools(enabled) {
@@ -256,6 +257,8 @@ async function poll() {
     if (ttlInput && document.activeElement !== ttlInput) ttlInput.value = state.accessTokenTtlSecs;
     const failRefreshCb = document.getElementById('fail-oauth-refresh');
     if (failRefreshCb && failRefreshCb.checked !== state.failOAuthRefresh) failRefreshCb.checked = state.failOAuthRefresh;
+    const strictRefreshCb = document.getElementById('strict-refresh-tokens');
+    if (strictRefreshCb && strictRefreshCb.checked !== state.strictRefreshTokens) strictRefreshCb.checked = state.strictRefreshTokens;
 
     if (state.tools) renderTools(state.tools);
     if (log.entries) renderLog(log.entries);
