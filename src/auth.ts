@@ -18,9 +18,13 @@ export function dynamicAuthMiddleware(
     }
 
     if (mode === "bearer") {
+      const bearer401 = (error: string) => {
+        res.set("WWW-Authenticate", "Bearer");
+        res.status(401).json({ error });
+      };
       const rejectMode = stateManager.state.rejectBearer;
       if (rejectMode === "401") {
-        res.status(401).json({ error: "Bearer token rejected (test toggle: 401)" });
+        bearer401("Bearer token rejected (test toggle: 401)");
         return;
       }
       if (rejectMode === "500") {
@@ -29,16 +33,16 @@ export function dynamicAuthMiddleware(
       }
       const authHeader = req.headers.authorization;
       if (!authHeader) {
-        res.status(401).json({ error: "Missing Authorization header" });
+        bearer401("Missing Authorization header");
         return;
       }
       const [type, token] = authHeader.split(" ");
       if (type?.toLowerCase() !== "bearer" || !token) {
-        res.status(401).json({ error: "Invalid Authorization header format, expected 'Bearer TOKEN'" });
+        bearer401("Invalid Authorization header format, expected 'Bearer TOKEN'");
         return;
       }
       if (token !== stateManager.state.bearerToken) {
-        res.status(401).json({ error: "Invalid bearer token" });
+        bearer401("Invalid bearer token");
         return;
       }
       return next();

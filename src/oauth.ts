@@ -43,7 +43,7 @@ oauthProvider.exchangeRefreshToken = async (client: any, refreshToken: string, s
 
   const ttlSecs = stateManager.state.accessTokenTtlSecs;
   const accessToken = randomUUID();
-  const resolvedScopes = scopes ?? ["mcp:tools"];
+  const resolvedScopes = scopes ?? stateManager.state.scopeConfig.scopes;
   (oauthProvider as any).tokens.set(accessToken, {
     token: accessToken,
     clientId: client.client_id,
@@ -87,10 +87,57 @@ oauthProvider.authorize = async (client: any, params: any, res: any) => {
   });
 };
 
-export const oauthMiddleware = requireBearerAuth({
-  verifier: oauthProvider,
-  requiredScopes: [],
-});
+import type { ScopeConfig } from "./state.js";
+
+function resolveWwwAuthScopes(config: ScopeConfig): string[] {
+  if (config.wwwAuthenticateScope === null) return [];
+  if (config.wwwAuthenticateScope === "use-metadata") return config.scopes;
+  return config.wwwAuthenticateScope.split(" ");
+}
+
+/**
+ * Dynamic OAuth middleware. Two independent concerns:
+ *
+ * 1. Scope advertisement — what scope value appears in WWW-Authenticate header
+ *    on 401s. Controlled by wwwAuthenticateScope. Uses res.set monkey-patch
+ *    because the SDK only sets scope when requiredScopes is non-empty.
+ *
+ * 2. Scope enforcement — whether valid tokens are rejected for missing scopes
+ *    (403 Insufficient Scope). Controlled by enforceScopeMatching. Uses
+ *    scopeConfig.scopes as requiredScopes. When ON, the SDK adds scope to
+ *    WWW-Authenticate itself, so the monkey-patch is skipped to avoid duplication.
+ */
+export const oauthMiddleware = (req: any, res: any, next: any) => {
+  const { scopeConfig } = stateManager.state;
+
+  if (scopeConfig.enforceScopeMatching) {
+    // Enforcement ON: SDK handles both scope checking and WWW-Authenticate header.
+    // Uses scopeConfig.scopes (the canonical scopes), not the advertised header scopes.
+    const mw = requireBearerAuth({
+      verifier: oauthProvider,
+      requiredScopes: scopeConfig.scopes,
+    });
+    return mw(req, res, next);
+  }
+
+  // Enforcement OFF: no scope checking. Monkey-patch to inject scope into header.
+  const advertisedScopes = resolveWwwAuthScopes(scopeConfig);
+  if (advertisedScopes.length > 0) {
+    const originalSet = res.set.bind(res);
+    res.set = (field: string, val: string) => {
+      if (field === "WWW-Authenticate" && typeof val === "string" && val.startsWith("Bearer")) {
+        val += `, scope="${advertisedScopes.join(" ")}"`;
+      }
+      return originalSet(field, val);
+    };
+  }
+
+  const mw = requireBearerAuth({
+    verifier: oauthProvider,
+    requiredScopes: [],
+  });
+  mw(req, res, next);
+};
 
 export function createOAuthRouter(baseUrl: string): Router {
   const router = Router();
@@ -101,17 +148,21 @@ export function createOAuthRouter(baseUrl: string): Router {
       return;
     }
     const issuer = `${baseUrl}/oauth`;
-    res.json({
+    const { scopes, hideScopesFromMetadata } = stateManager.state.scopeConfig;
+    const metadata: Record<string, any> = {
       issuer,
       authorization_endpoint: `${issuer}/authorize`,
       token_endpoint: `${issuer}/token`,
       registration_endpoint: `${issuer}/register`,
-      scopes_supported: ["mcp:tools"],
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"],
       token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
       code_challenge_methods_supported: ["S256"],
-    });
+    };
+    if (!hideScopesFromMetadata && scopes.length > 0) {
+      metadata.scopes_supported = scopes;
+    }
+    res.json(metadata);
   }
 
   function serveProtectedResourceMetadata(_req: any, res: any) {
@@ -119,11 +170,15 @@ export function createOAuthRouter(baseUrl: string): Router {
       res.status(404).json({ error: "OAuth not active" });
       return;
     }
-    res.json({
+    const { scopes, hideScopesFromMetadata } = stateManager.state.scopeConfig;
+    const metadata: Record<string, any> = {
       resource: baseUrl,
       authorization_servers: [`${baseUrl}/oauth`],
-      scopes_supported: ["mcp:tools"],
-    });
+    };
+    if (!hideScopesFromMetadata && scopes.length > 0) {
+      metadata.scopes_supported = scopes;
+    }
+    res.json(metadata);
   }
 
   function serveProtectedResourceMetadataMcp(_req: any, res: any) {
@@ -131,11 +186,15 @@ export function createOAuthRouter(baseUrl: string): Router {
       res.status(404).json({ error: "OAuth not active" });
       return;
     }
-    res.json({
+    const { scopes, hideScopesFromMetadata } = stateManager.state.scopeConfig;
+    const metadata: Record<string, any> = {
       resource: `${baseUrl}/mcp`,
       authorization_servers: [`${baseUrl}/oauth`],
-      scopes_supported: ["mcp:tools"],
-    });
+    };
+    if (!hideScopesFromMetadata && scopes.length > 0) {
+      metadata.scopes_supported = scopes;
+    }
+    res.json(metadata);
   }
 
   // Well-known paths - multiple variants because clients try different combinations

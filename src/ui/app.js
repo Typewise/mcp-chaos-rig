@@ -46,6 +46,7 @@ const authDescs = {
 };
 
 function updateAuthUI(mode) {
+  document.getElementById('auth-config-card').style.display = mode === 'none' ? 'none' : 'block';
   document.getElementById('bearer-config').style.display = mode === 'bearer' ? 'block' : 'none';
   document.getElementById('oauth-config').style.display = mode === 'oauth' ? 'block' : 'none';
   document.getElementById('auth-badge').textContent = 'auth: ' + mode;
@@ -89,7 +90,31 @@ async function updateOAuthSettings() {
   const accessTokenTtlSecs = parseInt(document.getElementById('access-token-ttl').value) || 60;
   const failOAuthRefresh = document.getElementById('fail-oauth-refresh').checked;
   const strictRefreshTokens = document.getElementById('strict-refresh-tokens').checked;
+  syncStrictRefreshRow(failOAuthRefresh);
   await api('/api/oauth-settings', { accessTokenTtlSecs, failOAuthRefresh, strictRefreshTokens });
+}
+
+function syncStrictRefreshRow(rejectAll) {
+  const row = document.getElementById('strict-refresh-row');
+  if (!row) return;
+  row.style.opacity = rejectAll ? '0.4' : '1';
+  row.style.pointerEvents = rejectAll ? 'none' : '';
+}
+
+async function updateScopeSettings() {
+  const scopesStr = document.getElementById('oauth-scopes').value.trim();
+  const scopes = scopesStr ? scopesStr.split(/\s+/) : [];
+  const hideScopesFromMetadata = document.getElementById('hide-scopes-metadata').checked;
+
+  const wwwAuthRadio = document.querySelector('input[name="wwwAuthScope"]:checked').value;
+  let wwwAuthenticateScope = null;
+  if (wwwAuthRadio === 'use-metadata') wwwAuthenticateScope = 'use-metadata';
+  else if (wwwAuthRadio === 'custom') {
+    wwwAuthenticateScope = document.getElementById('www-auth-scope-custom').value || null;
+  }
+
+  const enforceScopeMatching = document.getElementById('enforce-scope-matching').checked;
+  await api('/api/scope-settings', { scopes, wwwAuthenticateScope, hideScopesFromMetadata, enforceScopeMatching });
 }
 
 async function toggleFlakyTools(enabled) {
@@ -259,6 +284,24 @@ async function poll() {
     if (failRefreshCb && failRefreshCb.checked !== state.failOAuthRefresh) failRefreshCb.checked = state.failOAuthRefresh;
     const strictRefreshCb = document.getElementById('strict-refresh-tokens');
     if (strictRefreshCb && strictRefreshCb.checked !== state.strictRefreshTokens) strictRefreshCb.checked = state.strictRefreshTokens;
+    syncStrictRefreshRow(state.failOAuthRefresh);
+
+    if (state.scopeConfig) {
+      const scopesInput = document.getElementById('oauth-scopes');
+      if (scopesInput && document.activeElement !== scopesInput) scopesInput.value = state.scopeConfig.scopes.join(' ');
+      const hideScopesCb = document.getElementById('hide-scopes-metadata');
+      if (hideScopesCb && hideScopesCb.checked !== state.scopeConfig.hideScopesFromMetadata) hideScopesCb.checked = state.scopeConfig.hideScopesFromMetadata;
+      const enforceCb = document.getElementById('enforce-scope-matching');
+      if (enforceCb && enforceCb.checked !== state.scopeConfig.enforceScopeMatching) enforceCb.checked = state.scopeConfig.enforceScopeMatching;
+      const wwwAuthValue = state.scopeConfig.wwwAuthenticateScope === null ? 'null'
+        : state.scopeConfig.wwwAuthenticateScope === 'use-metadata' ? 'use-metadata' : 'custom';
+      const wwwAuthRadio = document.querySelector(`input[name="wwwAuthScope"][value="${wwwAuthValue}"]`);
+      if (wwwAuthRadio && !wwwAuthRadio.checked) wwwAuthRadio.checked = true;
+      if (wwwAuthValue === 'custom') {
+        const customInput = document.getElementById('www-auth-scope-custom');
+        if (customInput && document.activeElement !== customInput) customInput.value = state.scopeConfig.wwwAuthenticateScope || '';
+      }
+    }
 
     if (state.tools) renderTools(state.tools);
     if (log.entries) renderLog(log.entries);

@@ -39,10 +39,11 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "build": "rm -rf dist && tsc && cp -r src/ui dist/ui",
+    "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.26.0",
+    "@modelcontextprotocol/sdk": "1.27.1",
     "better-sqlite3": "12.6.2",
     "ejs": "4.0.1",
     "express": "5.2.1",
@@ -51,8 +52,9 @@
   "devDependencies": {
     "@types/better-sqlite3": "7.6.13",
     "@types/express": "5.0.6",
-    "@types/node": "25.2.1",
+    "@types/node": "~24",
     "tsx": "4.21.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
   }
 }

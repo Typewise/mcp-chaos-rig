@@ -133,6 +133,28 @@ export function createApiRouter(): Router {
     });
   });
 
+  router.post("/scope-settings", (req, res) => {
+    const { scopes, wwwAuthenticateScope, hideScopesFromMetadata, enforceScopeMatching } = req.body as {
+      scopes?: string[];
+      wwwAuthenticateScope?: string | null;
+      hideScopesFromMetadata?: boolean;
+      enforceScopeMatching?: boolean;
+    };
+    if (Array.isArray(scopes)) {
+      stateManager.state.scopeConfig.scopes = scopes;
+    }
+    if (wwwAuthenticateScope !== undefined) {
+      stateManager.state.scopeConfig.wwwAuthenticateScope = wwwAuthenticateScope;
+    }
+    if (typeof hideScopesFromMetadata === "boolean") {
+      stateManager.state.scopeConfig.hideScopesFromMetadata = hideScopesFromMetadata;
+    }
+    if (typeof enforceScopeMatching === "boolean") {
+      stateManager.state.scopeConfig.enforceScopeMatching = enforceScopeMatching;
+    }
+    res.json({ scopeConfig: stateManager.state.scopeConfig });
+  });
+
   router.get("/contacts", (_req, res) => {
     res.json({ contacts: listContacts() });
   });

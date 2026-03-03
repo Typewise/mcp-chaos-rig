@@ -7,6 +7,21 @@ export type RejectMode = "none" | "401" | "500";
 
 export type ToolVersion = "v1" | "v2";
 
+/**
+ * Controls how OAuth scopes are advertised across discovery tiers.
+ * See: specifications/mcp-chaos-rig-scope-discovery/plan.md
+ */
+export interface ScopeConfig {
+  /** Scopes advertised in well-known metadata endpoints. Empty array = omit the field. */
+  scopes: string[];
+  /** Scope value for WWW-Authenticate header on 401s. null = don't include scope in header. "use-metadata" = use scopes[]. */
+  wwwAuthenticateScope: string | null;
+  /** If true, omit scopes_supported from well-known metadata entirely. */
+  hideScopesFromMetadata: boolean;
+  /** If true, pass advertised scopes as requiredScopes — tokens without matching scopes get 403. */
+  enforceScopeMatching: boolean;
+}
+
 export interface LogEntry {
   timestamp: number;
   method: string;
@@ -43,6 +58,7 @@ export interface ServerState {
   flakyPct: number;
   enabledTools: Record<string, boolean>;
   toolVersions: Record<string, ToolVersion>;
+  scopeConfig: ScopeConfig;
 }
 
 const MAX_LOG_ENTRIES = 200;
@@ -76,6 +92,12 @@ class StateManager extends EventEmitter {
     toolVersions: {
       echo: "v1",
       add: "v1",
+    },
+    scopeConfig: {
+      scopes: ["mcp:tools"],
+      wwwAuthenticateScope: null,
+      hideScopesFromMetadata: false,
+      enforceScopeMatching: false,
     },
   };
 
