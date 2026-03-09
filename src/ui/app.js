@@ -31,6 +31,8 @@ let currentState = null;
 let lastLogLength = 0;
 
 
+document.getElementById('bearer-token').addEventListener('input', syncBearerHint);
+
 document.querySelectorAll('input[name="authMode"]').forEach(radio => {
   radio.addEventListener('change', async (e) => {
     const mode = e.target.value;
@@ -42,15 +44,18 @@ document.querySelectorAll('input[name="authMode"]').forEach(radio => {
 const authDescs = {
   none: 'No auth. All requests accepted. YOLO.',
   bearer: 'Require Authorization: Bearer <token> on every request.',
+  headers: 'Require fixed headers on every request. Returns 401 with details on missing or mismatched headers.',
   oauth: 'Full OAuth 2.1 flow. The /authorize endpoint shows a consent page where you can approve, decline, send a wrong code, or send a wrong state.',
 };
 
 function updateAuthUI(mode) {
   document.getElementById('auth-config-card').style.display = mode === 'none' ? 'none' : 'block';
   document.getElementById('bearer-config').style.display = mode === 'bearer' ? 'block' : 'none';
+  document.getElementById('headers-config').style.display = mode === 'headers' ? 'block' : 'none';
   document.getElementById('oauth-config').style.display = mode === 'oauth' ? 'block' : 'none';
   document.getElementById('auth-badge').textContent = 'auth: ' + mode;
   document.getElementById('auth-desc').textContent = authDescs[mode] || '';
+  if (mode === 'headers') renderHeaderPairs();
   if (mode === 'oauth') {
     document.getElementById('oauth-discovery').textContent = `${BASE_URL}/.well-known/oauth-authorization-server`;
     document.getElementById('oauth-authorize').textContent = `${BASE_URL}/oauth/authorize`;
@@ -59,9 +64,69 @@ function updateAuthUI(mode) {
   }
 }
 
+function syncBearerHint() {
+  const token = document.getElementById('bearer-token').value;
+  const hint = document.getElementById('bearer-header-hint');
+  if (hint) hint.textContent = `Authorization: Bearer ${token}`;
+}
+
 async function updateBearerToken() {
   const token = document.getElementById('bearer-token').value;
   await api('/api/bearer-token', { token });
+  syncBearerHint();
+}
+
+function renderHeaderPairs() {
+  const headers = (currentState && currentState.requiredHeaders) || {};
+  const container = document.getElementById('headers-pairs');
+  const entries = Object.entries(headers);
+  if (entries.length === 0) entries.push(['', '']);
+  container.innerHTML = entries.map(([key, value], i) => `
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px" data-header-row="${i}">
+      <input type="text" value="${esc(key)}" placeholder="Header name" style="flex:1" data-header-key="${i}">
+      <input type="text" value="${esc(value)}" placeholder="Header value" style="flex:1" data-header-val="${i}">
+      <button onclick="removeHeaderPair(${i})" style="padding:4px 8px; font-size:12px; background:#da3633">&times;</button>
+    </div>
+  `).join('');
+  container.querySelectorAll('input').forEach(input => {
+    input.addEventListener('change', saveHeaders);
+  });
+}
+
+function addHeaderPair() {
+  const container = document.getElementById('headers-pairs');
+  const i = container.children.length;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px';
+  row.dataset.headerRow = i;
+  row.innerHTML = `
+    <input type="text" value="" placeholder="Header name" style="flex:1" data-header-key="${i}">
+    <input type="text" value="" placeholder="Header value" style="flex:1" data-header-val="${i}">
+    <button onclick="removeHeaderPair(${i})" style="padding:4px 8px; font-size:12px; background:#da3633">&times;</button>
+  `;
+  container.appendChild(row);
+  row.querySelectorAll('input').forEach(input => {
+    input.addEventListener('change', saveHeaders);
+  });
+  row.querySelector('input').focus();
+}
+
+function removeHeaderPair(index) {
+  const container = document.getElementById('headers-pairs');
+  const row = container.querySelector(`[data-header-row="${index}"]`);
+  if (row) row.remove();
+  saveHeaders();
+}
+
+async function saveHeaders() {
+  const container = document.getElementById('headers-pairs');
+  const headers = {};
+  container.querySelectorAll('[data-header-row]').forEach(row => {
+    const key = row.querySelector('[data-header-key]').value.trim();
+    const val = row.querySelector('[data-header-val]').value;
+    if (key) headers[key] = val;
+  });
+  await api('/api/required-headers', { headers });
 }
 
 async function resetDb() { await api('/api/reset-db', {}); fetchContacts(); }
@@ -266,6 +331,8 @@ async function poll() {
 
     const rejectBearerRadio = document.querySelector(`input[name="rejectBearer"][value="${state.rejectBearer}"]`);
     if (rejectBearerRadio && !rejectBearerRadio.checked) rejectBearerRadio.checked = true;
+    const rejectHeadersRadio = document.querySelector(`input[name="rejectHeaders"][value="${state.rejectHeaders}"]`);
+    if (rejectHeadersRadio && !rejectHeadersRadio.checked) rejectHeadersRadio.checked = true;
     const rejectOAuthRadio = document.querySelector(`input[name="rejectOAuth"][value="${state.rejectOAuth}"]`);
     if (rejectOAuthRadio && !rejectOAuthRadio.checked) rejectOAuthRadio.checked = true;
     const slowCb = document.getElementById('slow-mode');
@@ -285,6 +352,11 @@ async function poll() {
     const strictRefreshCb = document.getElementById('strict-refresh-tokens');
     if (strictRefreshCb && strictRefreshCb.checked !== state.strictRefreshTokens) strictRefreshCb.checked = state.strictRefreshTokens;
     syncStrictRefreshRow(state.failOAuthRefresh);
+
+    if (state.authMode === 'headers' && state.requiredHeaders) {
+      const container = document.getElementById('headers-pairs');
+      if (container && !container.querySelector(':focus')) renderHeaderPairs();
+    }
 
     if (state.scopeConfig) {
       const scopesInput = document.getElementById('oauth-scopes');

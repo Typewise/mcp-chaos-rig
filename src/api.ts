@@ -29,12 +29,22 @@ export function createApiRouter(): Router {
 
   router.post("/auth-mode", (req, res) => {
     const { mode } = req.body as { mode: AuthMode };
-    if (!["none", "bearer", "oauth"].includes(mode)) {
+    if (!["none", "bearer", "oauth", "headers"].includes(mode)) {
       res.status(400).json({ error: "Invalid auth mode" });
       return;
     }
     stateManager.setAuthMode(mode);
     res.json({ authMode: mode, disconnectedSessions: true });
+  });
+
+  router.post("/required-headers", (req, res) => {
+    const { headers } = req.body as { headers: Record<string, string> };
+    if (!headers || typeof headers !== "object") {
+      res.status(400).json({ error: "headers object required" });
+      return;
+    }
+    stateManager.state.requiredHeaders = headers;
+    res.json({ requiredHeaders: headers });
   });
 
   router.post("/bearer-token", (req, res) => {
@@ -101,14 +111,15 @@ export function createApiRouter(): Router {
   });
 
   router.post("/reject-auth", (req, res) => {
-    const { target, mode } = req.body as { target: "bearer" | "oauth"; mode: RejectMode };
-    if (!["bearer", "oauth"].includes(target) || !["none", "401", "500"].includes(mode)) {
+    const { target, mode } = req.body as { target: "bearer" | "headers" | "oauth"; mode: RejectMode };
+    if (!["bearer", "headers", "oauth"].includes(target) || !["none", "401", "500"].includes(mode)) {
       res.status(400).json({ error: "Invalid target or mode" });
       return;
     }
     if (target === "bearer") stateManager.state.rejectBearer = mode;
+    else if (target === "headers") stateManager.state.rejectHeaders = mode;
     else stateManager.state.rejectOAuth = mode;
-    res.json({ rejectBearer: stateManager.state.rejectBearer, rejectOAuth: stateManager.state.rejectOAuth });
+    res.json({ rejectBearer: stateManager.state.rejectBearer, rejectHeaders: stateManager.state.rejectHeaders, rejectOAuth: stateManager.state.rejectOAuth });
   });
 
   router.post("/oauth-settings", (req, res) => {

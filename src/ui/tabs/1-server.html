@@ -12,6 +12,7 @@
           <div class="section">
             <label><input type="radio" name="authMode" value="none" checked> None</label>
             <label><input type="radio" name="authMode" value="bearer"> Bearer Token</label>
+            <label><input type="radio" name="authMode" value="headers"> Fixed Headers</label>
             <label><input type="radio" name="authMode" value="oauth"> OAuth 2.1</label>
           </div>
           <p style="color:#8b949e; font-size:11px" id="auth-desc">No auth. All requests accepted. YOLO.</p>
@@ -26,6 +27,7 @@
                 <input type="text" id="bearer-token" value="test-token-123" placeholder="Enter bearer token" style="flex:1">
                 <button onclick="updateBearerToken()">Update</button>
               </div>
+              <div class="url-display" id="bearer-header-hint" style="font-size:12px; margin-top:6px; padding:6px 10px">Authorization: Bearer test-token-123</div>
             </div>
             <div class="section">
               <h3>Token Validation</h3>
@@ -33,6 +35,21 @@
                 <label><input type="radio" name="rejectBearer" value="none" checked onchange="setRejectAuth('bearer', this.value)"> Accept if valid</label>
                 <label><input type="radio" name="rejectBearer" value="401" onchange="setRejectAuth('bearer', this.value)"> 401 — invalid token</label>
                 <label><input type="radio" name="rejectBearer" value="500" onchange="setRejectAuth('bearer', this.value)"> 500 — server error</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="headers-config" style="display:none">
+            <h2>Fixed Headers</h2>
+            <p style="color:#8b949e; font-size:11px; margin-bottom:12px">Every request must include these headers with exact values. Add key-value pairs below.</p>
+            <div id="headers-pairs"></div>
+            <button onclick="addHeaderPair()" style="margin-top:8px; font-size:12px">+ Add Header</button>
+            <div class="section" style="margin-top:16px">
+              <h3>Header Validation</h3>
+              <div style="display:flex; flex-direction:column; gap:6px">
+                <label><input type="radio" name="rejectHeaders" value="none" checked onchange="setRejectAuth('headers', this.value)"> Accept if valid</label>
+                <label><input type="radio" name="rejectHeaders" value="401" onchange="setRejectAuth('headers', this.value)"> 401 — reject all requests</label>
+                <label><input type="radio" name="rejectHeaders" value="500" onchange="setRejectAuth('headers', this.value)"> 500 — server error</label>
               </div>
             </div>
           </div>
@@ -77,52 +94,55 @@
                 </div>
               </div>
             </div>
-            <div class="section">
-              <h3>Scopes</h3>
-              <p style="color:#8b949e; font-size:11px; margin-bottom:8px">Published as <code style="font-size:10px">scopes_supported</code> in both well-known metadata endpoints. Clients read these to decide what permissions to request. Space-separated, e.g. <code style="font-size:10px">mcp:tools read write</code>.</p>
-              <div style="display:flex; gap:8px; align-items:center">
-                <input type="text" id="oauth-scopes" value="mcp:tools" placeholder="space-separated scopes" style="flex:1" onchange="updateScopeSettings()">
-              </div>
-              <div class="tool-row" style="margin-top:8px">
-                <label class="toggle">
-                  <input type="checkbox" id="hide-scopes-metadata" onchange="updateScopeSettings()">
-                  <span class="slider"></span>
-                </label>
-                <div>
-                  <span>Hide scopes from /.well-known metadata</span>
-                  <div style="color:#8b949e; font-size:11px">Omit <code style="font-size:10px">scopes_supported</code> from metadata. The scopes above still affect WWW-Authenticate when set to &ldquo;Use metadata scopes&rdquo;.</div>
+            <details>
+              <summary style="color:#8b949e; cursor:pointer; font-size:12px">Advanced: Scopes</summary>
+              <div class="section" style="margin-top:12px">
+                <h3>Scopes</h3>
+                <p style="color:#8b949e; font-size:11px; margin-bottom:8px">Published as <code style="font-size:10px">scopes_supported</code> in both well-known metadata endpoints. Clients read these to decide what permissions to request. Space-separated, e.g. <code style="font-size:10px">mcp:tools read write</code>.</p>
+                <div style="display:flex; gap:8px; align-items:center">
+                  <input type="text" id="oauth-scopes" value="mcp:tools" placeholder="space-separated scopes" style="flex:1" onchange="updateScopeSettings()">
+                </div>
+                <div class="tool-row" style="margin-top:8px">
+                  <label class="toggle">
+                    <input type="checkbox" id="hide-scopes-metadata" onchange="updateScopeSettings()">
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <span>Hide scopes from /.well-known metadata</span>
+                    <div style="color:#8b949e; font-size:11px">Omit <code style="font-size:10px">scopes_supported</code> from metadata. The scopes above still affect WWW-Authenticate when set to &ldquo;Use metadata scopes&rdquo;.</div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="section">
-              <h3>WWW-Authenticate Scope</h3>
-              <p style="color:#8b949e; font-size:11px; margin-bottom:8px">The <code style="font-size:10px">scope</code> parameter in <code style="font-size:10px">WWW-Authenticate: Bearer</code> on 401 responses (RFC 6750). This is how clients discover required scopes.</p>
-              <div style="display:flex; flex-direction:column; gap:8px">
-                <div>
-                  <label><input type="radio" name="wwwAuthScope" value="null" checked onchange="updateScopeSettings()"> Don't include scope in header</label>
-                  <div style="color:#8b949e; font-size:11px; margin-left:24px">Client must discover scopes from well-known metadata or hardcode them.</div>
+              <div class="section">
+                <h3>WWW-Authenticate Scope</h3>
+                <p style="color:#8b949e; font-size:11px; margin-bottom:8px">The <code style="font-size:10px">scope</code> parameter in <code style="font-size:10px">WWW-Authenticate: Bearer</code> on 401 responses (RFC 6750). This is how clients discover required scopes.</p>
+                <div style="display:flex; flex-direction:column; gap:8px">
+                  <div>
+                    <label><input type="radio" name="wwwAuthScope" value="null" checked onchange="updateScopeSettings()"> Don't include scope in header</label>
+                    <div style="color:#8b949e; font-size:11px; margin-left:24px">Client must discover scopes from well-known metadata or hardcode them.</div>
+                  </div>
+                  <div>
+                    <label><input type="radio" name="wwwAuthScope" value="use-metadata" onchange="updateScopeSettings()"> Use metadata scopes</label>
+                    <div style="color:#8b949e; font-size:11px; margin-left:24px">Header and metadata agree. Well-behaved server scenario.</div>
+                  </div>
+                  <div>
+                    <label><input type="radio" name="wwwAuthScope" value="custom" onchange="updateScopeSettings()"> Custom:</label>
+                    <div style="color:#8b949e; font-size:11px; margin-left:24px">Header and metadata disagree. Tests which source the client trusts &mdash; header (RFC 6750) vs metadata (RFC 9728).</div>
+                    <input type="text" id="www-auth-scope-custom" placeholder="custom scope value" style="margin-left:24px" onchange="updateScopeSettings()">
+                  </div>
                 </div>
-                <div>
-                  <label><input type="radio" name="wwwAuthScope" value="use-metadata" onchange="updateScopeSettings()"> Use metadata scopes</label>
-                  <div style="color:#8b949e; font-size:11px; margin-left:24px">Header and metadata agree. Well-behaved server scenario.</div>
-                </div>
-                <div>
-                  <label><input type="radio" name="wwwAuthScope" value="custom" onchange="updateScopeSettings()"> Custom:</label>
-                  <div style="color:#8b949e; font-size:11px; margin-left:24px">Header and metadata disagree. Tests which source the client trusts &mdash; header (RFC 6750) vs metadata (RFC 9728).</div>
-                  <input type="text" id="www-auth-scope-custom" placeholder="custom scope value" style="margin-left:24px" onchange="updateScopeSettings()">
+                <div class="tool-row" style="margin-top:10px">
+                  <label class="toggle">
+                    <input type="checkbox" id="enforce-scope-matching" onchange="updateScopeSettings()">
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <span>Enforce scope matching</span>
+                    <div style="color:#8b949e; font-size:11px">Reject valid tokens that lack the advertised scopes with 403 Insufficient Scope. Simulates a misconfigured server that enforces scopes it only meant to advertise.</div>
+                  </div>
                 </div>
               </div>
-              <div class="tool-row" style="margin-top:10px">
-                <label class="toggle">
-                  <input type="checkbox" id="enforce-scope-matching" onchange="updateScopeSettings()">
-                  <span class="slider"></span>
-                </label>
-                <div>
-                  <span>Enforce scope matching</span>
-                  <div style="color:#8b949e; font-size:11px">Reject valid tokens that lack the advertised scopes with 403 Insufficient Scope. Simulates a misconfigured server that enforces scopes it only meant to advertise.</div>
-                </div>
-              </div>
-            </div>
+            </details>
             <details>
               <summary style="color:#8b949e; cursor:pointer; font-size:12px">Endpoints</summary>
               <div style="margin-top:8px">

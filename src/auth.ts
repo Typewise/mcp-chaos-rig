@@ -1,10 +1,23 @@
 import type { Request, Response, NextFunction } from "express";
-import { stateManager } from "./state.js";
+import { stateManager, type RejectMode } from "./state.js";
+
+function applyReject(res: Response, rejectMode: RejectMode, label: string): boolean {
+  if (rejectMode === "401") {
+    res.status(401).json({ error: `${label} rejected (test toggle: 401)` });
+    return true;
+  }
+  if (rejectMode === "500") {
+    res.status(500).json({ error: `${label} rejected (test toggle: 500)` });
+    return true;
+  }
+  return false;
+}
 
 /**
  * Dynamic auth middleware that checks state.authMode per request.
  * - "none": pass through
  * - "bearer": validate Authorization: Bearer <token>
+ * - "headers": validate all required headers match
  * - "oauth": delegate to SDK's requireBearerAuth (set up externally)
  */
 export function dynamicAuthMiddleware(
@@ -18,19 +31,12 @@ export function dynamicAuthMiddleware(
     }
 
     if (mode === "bearer") {
+      if (applyReject(res, stateManager.state.rejectBearer, "Bearer token")) return;
+
       const bearer401 = (error: string) => {
         res.set("WWW-Authenticate", "Bearer");
         res.status(401).json({ error });
       };
-      const rejectMode = stateManager.state.rejectBearer;
-      if (rejectMode === "401") {
-        bearer401("Bearer token rejected (test toggle: 401)");
-        return;
-      }
-      if (rejectMode === "500") {
-        res.status(500).json({ error: "Bearer token rejected (test toggle: 500)" });
-        return;
-      }
       const authHeader = req.headers.authorization;
       if (!authHeader) {
         bearer401("Missing Authorization header");
@@ -48,7 +54,34 @@ export function dynamicAuthMiddleware(
       return next();
     }
 
+    if (mode === "headers") {
+      if (applyReject(res, stateManager.state.rejectHeaders, "Headers")) return;
+
+      const required = stateManager.state.requiredHeaders;
+      const missing: string[] = [];
+      const invalid: string[] = [];
+      for (const [key, expectedValue] of Object.entries(required)) {
+        const actual = req.headers[key.toLowerCase()] as string | undefined;
+        if (!actual) {
+          missing.push(key);
+        } else if (actual !== expectedValue) {
+          invalid.push(key);
+        }
+      }
+      if (missing.length > 0 || invalid.length > 0) {
+        res.status(401).json({
+          error: "Header authentication failed",
+          ...(missing.length > 0 && { missingHeaders: missing }),
+          ...(invalid.length > 0 && { invalidHeaders: invalid }),
+        });
+        return;
+      }
+      return next();
+    }
+
     if (mode === "oauth") {
+      if (applyReject(res, stateManager.state.rejectOAuth, "OAuth")) return;
+
       const oauthMw = getOAuthMiddleware();
       if (oauthMw) {
         return oauthMw(req, res, next);

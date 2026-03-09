@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-export type AuthMode = "none" | "bearer" | "oauth";
+export type AuthMode = "none" | "bearer" | "oauth" | "headers";
 
 /** "none" = accept tokens, "401" = invalid token, "500" = internal server error */
 export type RejectMode = "none" | "401" | "500";
@@ -46,7 +46,9 @@ export interface LogEntry {
 export interface ServerState {
   authMode: AuthMode;
   bearerToken: string;
+  requiredHeaders: Record<string, string>;
   rejectBearer: RejectMode;
+  rejectHeaders: RejectMode;
   rejectOAuth: RejectMode;
   slowMode: boolean;
   slowMinMs: number;
@@ -67,7 +69,12 @@ class StateManager extends EventEmitter {
   state: ServerState = {
     authMode: "bearer",
     bearerToken: "test-token-123",
+    requiredHeaders: {
+      client_id: "test-client-id",
+      client_secret: "test-client-secret",
+    },
     rejectBearer: "none",
+    rejectHeaders: "none",
     rejectOAuth: "none",
     accessTokenTtlSecs: 15,
     failOAuthRefresh: false,
