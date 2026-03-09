@@ -31,19 +31,22 @@ Run a local MCP server where you control everything:
 
 ### Test scenarios
 
-| Scenario                    | How to test it                                                                   |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| OAuth 2.1 consent flow      | Use the interactive consent page: approve, decline, invalid code, tampered state |
-| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                    |
-| Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                  |
-| Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                        |
+| Scenario                    | How to test it                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------ |
+| OAuth 2.1 consent flow      | Use the interactive consent page: approve, decline, invalid code, tampered state                 |
+| Fixed header auth           | Switch to Headers mode, configure key-value pairs, verify client sends them                      |
+| Missing/wrong headers       | Send requests with missing or mismatched headers — 401 with details                              |
+| Token rejection mid-session | Toggle "Reject OAuth" to 401 or 500 while client is connected                                    |
+| Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                                  |
+| Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                                        |
 | Wrong client refreshing     | Enable "Enforce refresh token ownership" — catches clients that lose credentials and re-register |
-| Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                 |
-| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                     |
-| Flaky tool calls            | Set failure rate 0-100%. Failed calls return `isError: true`                     |
-| Slow responses              | Enable slow mode with configurable latency range                                 |
-| PKCE code exchange          | OAuth consent page offers "Wrong Code" and "Wrong State" options                 |
-| Database-backed tools       | CRUD operations on a real SQLite contact database                                |
+| Scope discovery conflict    | Set different scopes in metadata vs WWW-Authenticate header, test which the client trusts        |
+| Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                                 |
+| Tool schema changing        | Switch echo or add between v1 and v2 schemas                                                     |
+| Flaky tool calls            | Set failure rate 0-100%. Failed calls return `isError: true`                                     |
+| Slow responses              | Enable slow mode with configurable latency range                                                 |
+| PKCE code exchange          | OAuth consent page offers "Wrong Code" and "Wrong State" options                                 |
+| Database-backed tools       | CRUD operations on a real SQLite contact database                                                |
 
 ---
 
@@ -81,7 +84,7 @@ BASE_URL=https://your-tunnel.example.dev npx mcp-chaos-rig
 
 ### Auth state
 
-All auth state lives in memory and resets on restart. Bearer mode starts with token `test-token-123` (no expiry — valid until changed). OAuth access tokens expire based on the TTL you configure. Refresh tokens are tracked per client when "Enforce refresh token ownership" is enabled — a token can only be refreshed by the client that received it. After a restart, do one refresh with ownership off to re-seed the tracking, then turn it on.
+All state is in-memory and resets on restart. Bearer starts with token `test-token-123` (valid until changed). OAuth tokens expire per TTL. Refresh tokens track ownership per client when enabled. After restart, do one refresh with ownership off to re-seed, then turn it on.
 
 ---
 
