@@ -1,6 +1,6 @@
 {
   "name": "mcp-chaos-rig",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "A local MCP server that breaks on demand. Test your client against auth failures, disappearing tools, flaky responses, and token expiry.",
   "type": "module",
   "license": "MIT",
@@ -43,9 +43,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.27.1",
-    "better-sqlite3": "12.6.2",
-    "ejs": "4.0.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "better-sqlite3": "12.8.0",
+    "ejs": "5.0.1",
     "express": "5.2.1",
     "zod": "4.3.6"
   },
@@ -54,7 +54,7 @@
     "@types/express": "5.0.6",
     "@types/node": "~24",
     "tsx": "4.21.0",
-    "typescript": "5.9.3",
-    "vitest": "4.0.18"
+    "typescript": "6.0.2",
+    "vitest": "4.1.2"
   }
 }

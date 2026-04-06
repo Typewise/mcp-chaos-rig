@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { stateManager, type RejectMode } from "./state.js";
+import { resolveWwwAuthScopes } from "./oauth.js";
 
 function applyReject(res: Response, rejectMode: RejectMode, label: string): boolean {
   if (rejectMode === "401") {
@@ -31,6 +32,9 @@ export function dynamicAuthMiddleware(
     }
 
     if (mode === "bearer") {
+      if (stateManager.state.rejectBearer === "401") {
+        res.set("WWW-Authenticate", "Bearer");
+      }
       if (applyReject(res, stateManager.state.rejectBearer, "Bearer token")) return;
 
       const bearer401 = (error: string) => {
@@ -80,6 +84,13 @@ export function dynamicAuthMiddleware(
     }
 
     if (mode === "oauth") {
+      if (stateManager.state.rejectOAuth === "401") {
+        const scopes = resolveWwwAuthScopes(stateManager.state.scopeConfig);
+        const header = scopes.length > 0
+          ? `Bearer, scope="${scopes.join(" ")}"`
+          : "Bearer";
+        res.set("WWW-Authenticate", header);
+      }
       if (applyReject(res, stateManager.state.rejectOAuth, "OAuth")) return;
 
       const oauthMw = getOAuthMiddleware();

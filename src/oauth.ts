@@ -89,7 +89,7 @@ oauthProvider.authorize = async (client: any, params: any, res: any) => {
 
 import type { ScopeConfig } from "./state.js";
 
-function resolveWwwAuthScopes(config: ScopeConfig): string[] {
+export function resolveWwwAuthScopes(config: ScopeConfig): string[] {
   if (config.wwwAuthenticateScope === null) return [];
   if (config.wwwAuthenticateScope === "use-metadata") return config.scopes;
   return config.wwwAuthenticateScope.split(" ");
