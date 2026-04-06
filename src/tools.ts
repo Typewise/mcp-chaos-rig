@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ServerState, ToolVersion } from "./state.js";
 import { slowModeDelay } from "./state.js";
-import { listContacts, searchContacts, createContact, deleteContact, updateContactField } from "./db.js";
+import { listContacts, getContact, getContactByEmail, searchContacts, createContact, deleteContact, updateContactField } from "./db.js";
 
 interface ToolDef {
   name: string;
@@ -161,6 +161,40 @@ const listContactsTool: ToolDef = {
   },
 };
 
+const getContactByIdTool: ToolDef = {
+  name: "get-contact-by-id",
+  title: "Get Contact by ID",
+  description:
+    "Returns a single contact by its numeric ID as a JSON object. Returns an error message " +
+    "if no contact with the given ID exists.",
+  inputSchema: {
+    id: z.number().int().describe("The ID of the contact to retrieve."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    const contact = getContact(Number(args.id));
+    if (!contact) return textResult(`Error: no contact with id ${args.id}`);
+    return textResult(JSON.stringify(contact, null, 2));
+  },
+};
+
+const getContactByEmailTool: ToolDef = {
+  name: "get-contact-by-email",
+  title: "Get Contact by Email",
+  description:
+    "Returns a single contact by exact email address as a JSON object. The match is exact " +
+    "(case-sensitive). Returns an error message if no contact with the given email exists.",
+  inputSchema: {
+    email: z.string().describe("The exact email address to look up, e.g. 'alice@acme.com'."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    const contact = getContactByEmail(String(args.email));
+    if (!contact) return textResult(`Error: no contact with email ${args.email}`);
+    return textResult(JSON.stringify(contact, null, 2));
+  },
+};
+
 const searchContactsTool: ToolDef = {
   name: "search-contacts",
   title: "Search Contacts",
@@ -246,6 +280,8 @@ const staticTools: Record<string, ToolDef> = {
   "get-time": getTime,
   "random-number": randomNumber,
   "reverse": reverse,
+  "get-contact-by-id": getContactByIdTool,
+  "get-contact-by-email": getContactByEmailTool,
   "list-contacts": listContactsTool,
   "search-contacts": searchContactsTool,
   "create-contact": createContactTool,

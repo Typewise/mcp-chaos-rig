@@ -90,6 +90,8 @@ class StateManager extends EventEmitter {
       "get-time": false,
       "random-number": false,
       reverse: false,
+      "get-contact-by-id": true,
+      "get-contact-by-email": true,
       "list-contacts": true,
       "search-contacts": true,
       "create-contact": true,

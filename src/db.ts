@@ -54,6 +54,16 @@ export function createContact(name: string, email: string, company: string, note
   return db.prepare("SELECT * FROM contacts WHERE id = ?").get(result.lastInsertRowid) as Contact;
 }
 
+export function getContact(id: number): Contact | null {
+  const row = db.prepare("SELECT * FROM contacts WHERE id = ?").get(id) as Contact | undefined;
+  return row ?? null;
+}
+
+export function getContactByEmail(email: string): Contact | null {
+  const row = db.prepare("SELECT * FROM contacts WHERE email = ?").get(email) as Contact | undefined;
+  return row ?? null;
+}
+
 export function deleteContact(id: number): boolean {
   const result = db.prepare("DELETE FROM contacts WHERE id = ?").run(id);
   return result.changes > 0;
