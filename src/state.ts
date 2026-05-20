@@ -90,6 +90,7 @@ class StateManager extends EventEmitter {
       "get-time": false,
       "random-number": false,
       reverse: false,
+      typeEcho: true,
       "get-contact-by-id": true,
       "get-contact-by-email": true,
       "list-contacts": true,
@@ -97,6 +98,9 @@ class StateManager extends EventEmitter {
       "create-contact": true,
       "update-contact": true,
       "delete-contact": true,
+      "submit-customs-declaration": false,
+      "create-product-listing": false,
+      "search-properties": false,
     },
     toolVersions: {
       echo: "v1",

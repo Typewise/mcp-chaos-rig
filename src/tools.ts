@@ -276,10 +276,238 @@ const deleteContactTool: ToolDef = {
   },
 };
 
+const submitCustomsDeclarationTool: ToolDef = {
+  name: "submit-customs-declaration",
+  title: "Submit Customs Declaration",
+  description:
+    "Submits an international shipping customs declaration (CN23 / commercial invoice equivalent). " +
+    "Requires complete shipper, recipient, package, commercial, and compliance details. All fields " +
+    "are mandatory because incomplete declarations are rejected by carrier customs brokers. Returns " +
+    "a JSON receipt echoing the submitted declaration.",
+  inputSchema: {
+    shipper_name: z.string().describe("Full legal name of the shipper / exporter."),
+    shipper_company: z.string().describe("Shipper company / organization name."),
+    shipper_address_line1: z.string().describe("Shipper street address, line 1."),
+    shipper_address_line2: z.string().describe("Shipper street address, line 2 (or empty string)."),
+    shipper_city: z.string().describe("Shipper city."),
+    shipper_state: z.string().describe("Shipper state / province / region."),
+    shipper_postal_code: z.string().describe("Shipper postal / ZIP code."),
+    shipper_country: z.string().describe("Shipper country as ISO 3166-1 alpha-2 code."),
+    shipper_phone: z.string().describe("Shipper contact phone in E.164 format."),
+    shipper_email: z.string().describe("Shipper contact email."),
+    recipient_name: z.string().describe("Full legal name of the recipient / importer."),
+    recipient_company: z.string().describe("Recipient company name (or empty string)."),
+    recipient_address_line1: z.string().describe("Recipient street address, line 1."),
+    recipient_address_line2: z.string().describe("Recipient street address, line 2 (or empty string)."),
+    recipient_city: z.string().describe("Recipient city."),
+    recipient_state: z.string().describe("Recipient state / province / region."),
+    recipient_postal_code: z.string().describe("Recipient postal / ZIP code."),
+    recipient_country: z.string().describe("Recipient country as ISO 3166-1 alpha-2 code."),
+    recipient_phone: z.string().describe("Recipient contact phone in E.164 format."),
+    recipient_email: z.string().describe("Recipient contact email."),
+    tracking_number: z.string().describe("Carrier tracking / waybill number."),
+    carrier_code: z.string().describe("Carrier code, e.g. 'UPS', 'DHL', 'FEDEX'."),
+    service_level: z.string().describe("Service level, e.g. 'EXPRESS', 'STANDARD', 'ECONOMY'."),
+    package_count: z.number().int().describe("Number of packages in this shipment."),
+    total_weight_kg: z.number().describe("Total gross weight in kilograms."),
+    length_cm: z.number().describe("Package length in centimeters."),
+    width_cm: z.number().describe("Package width in centimeters."),
+    height_cm: z.number().describe("Package height in centimeters."),
+    contents_description: z.string().describe("Plain-language description of the goods."),
+    contents_category: z.string().describe("Category, e.g. 'merchandise', 'gift', 'sample', 'documents', 'return'."),
+    hs_tariff_code: z.string().describe("6-10 digit Harmonized System tariff code."),
+    country_of_origin: z.string().describe("Country where goods were manufactured (ISO 3166-1 alpha-2)."),
+    declared_value: z.number().describe("Declared customs value of the goods."),
+    currency: z.string().describe("ISO 4217 currency code for declared value, e.g. 'USD', 'EUR'."),
+    incoterm: z.string().describe("Incoterm 2020 code, e.g. 'DDP', 'DAP', 'EXW', 'FOB'."),
+    customs_purpose: z.string().describe("Customs purpose code, e.g. 'sale', 'gift', 'sample', 'return', 'repair'."),
+    invoice_number: z.string().describe("Commercial invoice number."),
+    invoice_date: z.string().describe("Commercial invoice date in YYYY-MM-DD."),
+    purchase_order_number: z.string().describe("Buyer purchase order number (or empty string)."),
+    exporter_tax_id: z.string().describe("Exporter tax / VAT / EIN identifier."),
+    importer_tax_id: z.string().describe("Importer tax / VAT identifier."),
+    eori_number: z.string().describe("EU EORI number for the responsible party (or empty string)."),
+    license_number: z.string().describe("Export license number (or empty string)."),
+    license_type: z.string().describe("Export license type, e.g. 'NLR', 'individual', 'general'."),
+    license_issue_date: z.string().describe("License issue date in YYYY-MM-DD (or empty string)."),
+    license_expiry_date: z.string().describe("License expiry date in YYYY-MM-DD (or empty string)."),
+    signed_by: z.string().describe("Full name of the person signing the declaration."),
+    signatory_title: z.string().describe("Job title of the signatory."),
+    signatory_email: z.string().describe("Email of the signatory."),
+    signature_date: z.string().describe("Date the declaration was signed, YYYY-MM-DD."),
+    acknowledged_accuracy: z.boolean().describe("Must be true: signatory acknowledges contents are accurate."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    console.log("[submit-customs-declaration]", JSON.stringify(args));
+    return textResult(JSON.stringify({ status: "accepted", declaration: args }, null, 2));
+  },
+};
+
+const createProductListingTool: ToolDef = {
+  name: "create-product-listing",
+  title: "Create Product Listing",
+  description:
+    "Creates a marketplace product listing. The first 25 fields are required (core product, pricing, " +
+    "inventory, shipping, and listing metadata). The remaining 25 fields are optional and cover " +
+    "extended attributes, hazard / handling flags, media, and promotional pricing. Returns a JSON " +
+    "receipt of the listing.",
+  inputSchema: {
+    title: z.string().describe("Product title shown in search results. Max 80 characters."),
+    sku: z.string().describe("Seller SKU. Must be unique within the seller account."),
+    category: z.string().describe("Marketplace category path, e.g. 'Electronics > Audio > Headphones'."),
+    brand: z.string().describe("Brand or manufacturer name."),
+    condition: z.string().describe("Item condition: 'new', 'used', 'refurbished', 'open_box'."),
+    price: z.number().describe("List price in the specified currency."),
+    currency: z.string().describe("ISO 4217 currency code, e.g. 'USD'."),
+    quantity_available: z.number().int().describe("Number of units in stock."),
+    description: z.string().describe("Long-form product description. Plain text or basic HTML."),
+    main_image_url: z.string().describe("Absolute URL of the primary product image."),
+    weight_grams: z.number().describe("Shipping weight in grams."),
+    length_cm: z.number().describe("Shipping carton length in centimeters."),
+    width_cm: z.number().describe("Shipping carton width in centimeters."),
+    height_cm: z.number().describe("Shipping carton height in centimeters."),
+    shipping_class: z.string().describe("Shipping class code, e.g. 'standard', 'oversize', 'hazmat'."),
+    country_of_origin: z.string().describe("Manufacturing country as ISO 3166-1 alpha-2."),
+    seller_id: z.string().describe("Marketplace seller account ID."),
+    warehouse_id: z.string().describe("Source warehouse / fulfillment center ID."),
+    tax_class: z.string().describe("Tax classification, e.g. 'standard', 'reduced', 'zero', 'exempt'."),
+    return_policy_id: z.string().describe("Return policy ID configured on the seller account."),
+    handling_time_days: z.number().int().describe("Handling time before dispatch, in business days."),
+    listing_format: z.string().describe("Listing format: 'fixed_price', 'auction', 'classified'."),
+    listing_duration_days: z.number().int().describe("How many days the listing should remain active."),
+    start_date: z.string().describe("Listing start date in YYYY-MM-DD."),
+    status: z.string().describe("Initial status: 'draft', 'active', 'scheduled'."),
+    subtitle: z.string().optional().describe("Optional subtitle shown below the title."),
+    gtin: z.string().optional().describe("GTIN / UPC / EAN / ISBN barcode value."),
+    mpn: z.string().optional().describe("Manufacturer part number."),
+    color: z.string().optional().describe("Primary color."),
+    size: z.string().optional().describe("Size designation (e.g. 'M', '42', '15-inch')."),
+    material: z.string().optional().describe("Primary material composition."),
+    age_group: z.string().optional().describe("Target age group: 'adult', 'kids', 'infant', etc."),
+    gender: z.string().optional().describe("Target gender: 'male', 'female', 'unisex'."),
+    season: z.string().optional().describe("Target season: 'spring', 'summer', 'fall', 'winter', 'all-season'."),
+    style: z.string().optional().describe("Style descriptor, e.g. 'modern', 'vintage'."),
+    pattern: z.string().optional().describe("Pattern, e.g. 'solid', 'striped', 'floral'."),
+    theme: z.string().optional().describe("Theme tag, e.g. 'holiday', 'sports', 'wedding'."),
+    compatible_with: z.string().optional().describe("Compatibility note, e.g. 'iPhone 15 Pro'."),
+    warranty_months: z.number().int().optional().describe("Manufacturer warranty length in months."),
+    battery_required: z.boolean().optional().describe("Whether the product requires batteries."),
+    assembly_required: z.boolean().optional().describe("Whether the product requires assembly."),
+    hazmat_class: z.string().optional().describe("UN hazmat class code if applicable."),
+    fragile: z.boolean().optional().describe("Mark as fragile for handling."),
+    perishable: z.boolean().optional().describe("Whether the product is perishable."),
+    cold_chain_required: z.boolean().optional().describe("Whether cold-chain shipping is required."),
+    additional_image_urls: z.array(z.string()).optional().describe("Up to 8 additional image URLs."),
+    video_url: z.string().optional().describe("Optional product video URL."),
+    promotional_price: z.number().optional().describe("Optional sale price."),
+    promotional_start_date: z.string().optional().describe("Promotion start date in YYYY-MM-DD."),
+    promotional_end_date: z.string().optional().describe("Promotion end date in YYYY-MM-DD."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    console.log("[create-product-listing]", JSON.stringify(args));
+    const listingId = `lst_${Math.random().toString(36).slice(2, 10)}`;
+    return textResult(JSON.stringify({ status: "created", listing_id: listingId, listing: args }, null, 2));
+  },
+};
+
+const searchPropertiesTool: ToolDef = {
+  name: "search-properties",
+  title: "Search Real Estate Listings",
+  description:
+    "Searches real estate listings using up to 50 optional filters covering location, price, " +
+    "size, age, amenities, view, accessibility, and pagination. All parameters are optional; with " +
+    "no filters the tool returns a default page of recent listings. Returns a JSON object echoing " +
+    "the applied filters and a stub result set.",
+  inputSchema: {
+    location_city: z.string().optional().describe("City name to search within."),
+    location_state: z.string().optional().describe("State / province code."),
+    location_postal_code: z.string().optional().describe("Postal / ZIP code."),
+    location_country: z.string().optional().describe("Country as ISO 3166-1 alpha-2."),
+    latitude: z.number().optional().describe("Center latitude for radius search."),
+    longitude: z.number().optional().describe("Center longitude for radius search."),
+    radius_km: z.number().optional().describe("Radius in kilometers from lat/lon."),
+    listing_type: z.string().optional().describe("'sale', 'rent', 'short_term', 'auction'."),
+    property_type: z.string().optional().describe("'house', 'apartment', 'condo', 'townhouse', 'land', 'commercial'."),
+    min_price: z.number().optional().describe("Minimum price."),
+    max_price: z.number().optional().describe("Maximum price."),
+    currency: z.string().optional().describe("ISO 4217 currency code for price filters."),
+    min_bedrooms: z.number().int().optional().describe("Minimum number of bedrooms."),
+    max_bedrooms: z.number().int().optional().describe("Maximum number of bedrooms."),
+    min_bathrooms: z.number().optional().describe("Minimum number of bathrooms."),
+    max_bathrooms: z.number().optional().describe("Maximum number of bathrooms."),
+    min_square_meters: z.number().optional().describe("Minimum interior area in m²."),
+    max_square_meters: z.number().optional().describe("Maximum interior area in m²."),
+    min_lot_size_m2: z.number().optional().describe("Minimum lot size in m²."),
+    max_lot_size_m2: z.number().optional().describe("Maximum lot size in m²."),
+    min_year_built: z.number().int().optional().describe("Earliest year built."),
+    max_year_built: z.number().int().optional().describe("Latest year built."),
+    min_garage_spaces: z.number().int().optional().describe("Minimum number of garage spaces."),
+    max_hoa_fee: z.number().optional().describe("Maximum monthly HOA / strata fee."),
+    max_property_tax: z.number().optional().describe("Maximum annual property tax."),
+    has_pool: z.boolean().optional().describe("Require a pool."),
+    has_garden: z.boolean().optional().describe("Require a garden / yard."),
+    has_basement: z.boolean().optional().describe("Require a basement."),
+    has_elevator: z.boolean().optional().describe("Require an elevator."),
+    has_balcony: z.boolean().optional().describe("Require a balcony."),
+    has_terrace: z.boolean().optional().describe("Require a terrace."),
+    has_fireplace: z.boolean().optional().describe("Require a fireplace."),
+    has_air_conditioning: z.boolean().optional().describe("Require air conditioning."),
+    has_heating: z.boolean().optional().describe("Require heating."),
+    heating_type: z.string().optional().describe("Heating type filter, e.g. 'gas', 'electric', 'heat_pump'."),
+    furnished: z.boolean().optional().describe("Require the property to be furnished."),
+    pets_allowed: z.boolean().optional().describe("Pets must be allowed."),
+    smoking_allowed: z.boolean().optional().describe("Smoking must be allowed."),
+    wheelchair_accessible: z.boolean().optional().describe("Require wheelchair accessibility."),
+    waterfront: z.boolean().optional().describe("Waterfront properties only."),
+    mountain_view: z.boolean().optional().describe("Mountain view required."),
+    city_view: z.boolean().optional().describe("City view required."),
+    school_district: z.string().optional().describe("School district name."),
+    min_school_rating: z.number().optional().describe("Minimum local school rating (0-10)."),
+    min_days_on_market: z.number().int().optional().describe("Listings on market at least this many days."),
+    max_days_on_market: z.number().int().optional().describe("Listings on market at most this many days."),
+    sort_by: z.string().optional().describe("Sort field: 'price', 'date', 'size', 'beds'."),
+    sort_order: z.string().optional().describe("'asc' or 'desc'."),
+    page: z.number().int().optional().describe("Page number, 1-indexed."),
+    limit: z.number().int().optional().describe("Results per page, 1-100."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    console.log("[search-properties]", JSON.stringify(args));
+    return textResult(JSON.stringify({ status: "ok", filters: args, results: [] }, null, 2));
+  },
+};
+
+const typeEchoTool: ToolDef = {
+  name: "typeEcho",
+  title: "Type Echo",
+  description:
+    "Echoes back the provided typed inputs as a JSON object. Exposes one optional parameter " +
+    "per JSON Schema primitive type (integer, number, string, boolean, array, object, null) " +
+    "plus a string enum. Useful for verifying that an MCP client correctly serializes and " +
+    "round-trips every JSON Schema type.",
+  inputSchema: {
+    aInteger: z.number().int().optional().describe("Optional integer value to echo."),
+    bNumber: z.number().optional().describe("Optional floating-point number to echo."),
+    cString: z.string().optional().describe("Optional string value to echo."),
+    dBoolean: z.boolean().optional().describe("Optional boolean value to echo."),
+    eArray: z.array(z.string()).optional().describe("Optional array of strings to echo."),
+    fObject: z.record(z.string(), z.string()).optional().describe("Optional string-to-string map to echo."),
+    gNull: z.null().optional().describe("Optional explicit null value to echo."),
+    hEnum: z.enum(["alpha", "beta", "gamma"]).optional().describe("Optional enum value: 'alpha', 'beta', or 'gamma'."),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    return textResult(JSON.stringify(args, null, 2));
+  },
+};
+
 const staticTools: Record<string, ToolDef> = {
   "get-time": getTime,
   "random-number": randomNumber,
   "reverse": reverse,
+  "typeEcho": typeEchoTool,
   "get-contact-by-id": getContactByIdTool,
   "get-contact-by-email": getContactByEmailTool,
   "list-contacts": listContactsTool,
@@ -287,6 +515,9 @@ const staticTools: Record<string, ToolDef> = {
   "create-contact": createContactTool,
   "update-contact": updateContactTool,
   "delete-contact": deleteContactTool,
+  "submit-customs-declaration": submitCustomsDeclarationTool,
+  "create-product-listing": createProductListingTool,
+  "search-properties": searchPropertiesTool,
 };
 
 export function getToolDef(name: string, version?: ToolVersion): ToolDef | undefined {
