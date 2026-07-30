@@ -40,6 +40,8 @@ Run a local MCP server where you control everything:
 | Token expiry and refresh    | Set access token TTL to a short value, watch the client refresh                                  |
 | Reject refresh tokens       | Toggle "Reject refresh tokens" to force re-authentication                                        |
 | Wrong client refreshing     | Enable "Enforce refresh token ownership" — catches clients that lose credentials and re-register |
+| No dynamic registration     | Switch to "Pre-registered client only" — `/register` 404s, only your `client_id` works           |
+| Rotated client credentials  | Change the pre-registered `client_id` mid-session — the old one now fails with `invalid_client`  |
 | Scope discovery conflict    | Set different scopes in metadata vs WWW-Authenticate header, test which the client trusts        |
 | Tool disappearing           | Disable a tool in the Tools tab. Clients receive `tools/changed`                                 |
 | Tool schema changing        | Switch echo or add between v1 and v2 schemas                                                     |
@@ -82,9 +84,11 @@ If your production environment needs to reach Chaos Rig, expose it via a tunnel 
 BASE_URL=https://your-tunnel.example.dev npx mcp-chaos-rig
 ```
 
+Auth mode starts at Bearer, so a tunnel-facing rig usually wants `AUTH_MODE` too (`none`, `bearer`, `headers`, `oauth`). For OAuth with pre-registered credentials, see [Client registration](#client-registration).
+
 ### Auth state
 
-All state is in-memory and resets on restart. Bearer starts with token `test-token-123` (valid until changed). OAuth tokens expire per TTL. Refresh tokens track ownership per client when enabled. After restart, do one refresh with ownership off to re-seed, then turn it on.
+All state is in-memory and resets on restart, back to whatever the environment seeds (`AUTH_MODE`, `OAUTH_CLIENT_MODE`, `STATIC_*`) or to the built-in defaults. Bearer starts with token `test-token-123` (valid until changed). OAuth tokens expire per TTL. Refresh tokens track ownership per client when enabled. After restart, do one refresh with ownership off to re-seed, then turn it on.
 
 ---
 
@@ -94,15 +98,53 @@ All state is in-memory and resets on restart. Bearer starts with token `test-tok
 
 Configure auth mode, slow mode (random latency), and flaky tools (% failure rate).
 
-| Auth mode | Behavior                                              |
-| --------- | ----------------------------------------------------- |
-| None      | All requests pass through                             |
-| Bearer    | Requires `Authorization: Bearer test-token-123`       |
-| OAuth 2.1 | Full authorization flow with interactive consent page |
+| Auth mode     | Behavior                                              |
+| ------------- | ----------------------------------------------------- |
+| None          | All requests pass through                             |
+| Bearer        | Requires `Authorization: Bearer test-token-123`       |
+| Fixed Headers | Requires configured key-value header pairs on every request |
+| OAuth 2.1     | Full authorization flow with interactive consent page |
 
-Bearer and OAuth modes support fault injection: force 401 or 500 responses to test error handling.
+Bearer, Fixed Headers and OAuth modes support fault injection: force 401 or 500 responses to test error handling. The mode starts at Bearer unless `AUTH_MODE` says otherwise.
 
-OAuth mode adds controls for access token TTL, refresh token rejection, and refresh token ownership enforcement. OAuth endpoints are listed in a collapsible section.
+OAuth mode adds controls for client registration, access token TTL, refresh token rejection, and refresh token ownership enforcement. OAuth endpoints are listed in a collapsible section.
+
+#### Client registration
+
+| Mode                       | Behavior                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Dynamic registration       | Clients register themselves at `/oauth/register` and get fresh credentials (RFC 7591)     |
+| Pre-registered client only | Only the configured `client_id` / `client_secret` is accepted; registration is turned off |
+
+Static mode reproduces authorization servers that issue credentials out of band (Google, Atlassian, most enterprise IdPs):
+
+- `registration_endpoint` disappears from the well-known metadata
+- `POST /oauth/register` and `POST /register` return 404 `registration_not_supported`
+- any other `client_id` gets `invalid_client` at `/authorize` and `/token`
+- an empty `client_secret` makes it a public client, so the token endpoint accepts auth method `none`
+- redirect URIs must match a configured one exactly, except the port on loopback hosts (RFC 8252)
+
+The shipped default redirect URI points at a local client. Testing against a deployed client means registering that client's callback instead, or `/authorize` returns 400 `invalid_request` — the response lists the URIs that are registered, since the port relaxation only applies to loopback hosts and `https://` callbacks must match exactly.
+
+Set the client at boot so a tunnel-facing rig starts ready:
+
+```bash
+AUTH_MODE=oauth \
+OAUTH_CLIENT_MODE=static \
+STATIC_CLIENT_ID=acme-client \
+STATIC_CLIENT_SECRET=acme-secret \
+STATIC_REDIRECT_URIS=https://platform-api.example.app/api/mcp/oauth/callback \
+BASE_URL=https://your-tunnel.example.dev npx mcp-chaos-rig
+```
+
+`AUTH_MODE` is required here: it defaults to `bearer`, and the OAuth endpoints 404 until it is `oauth` (`none`, `bearer`, `headers`, `oauth`; anything else fails at startup). `STATIC_REDIRECT_URIS` is comma-separated. An empty `STATIC_CLIENT_SECRET=` boots a public client. Everything stays editable from the Server tab afterwards.
+
+Changing the `client_id` drops the previous one, so you can test credential rotation against a live client. Set it from the API too:
+
+```bash
+curl -X POST localhost:4100/api/oauth-client -H 'Content-Type: application/json' \
+  -d '{"mode":"static","clientId":"acme-client","clientSecret":"acme-secret","redirectUris":["http://localhost:3000/api/mcp/oauth/callback"]}'
+```
 
 ### Tools
 
@@ -117,7 +159,11 @@ Toggle tools on/off. Disabling sends `tools/changed` to connected clients. Some 
 - `get-time`: current server time as ISO 8601
 - `random-number`: random integer in a range
 - `reverse`: reverses a string
-- `list-contacts`, `search-contacts`, `create-contact`, `update-contact`, `delete-contact`: SQLite CRUD
+- `typeEcho`: echoes one optional parameter per JSON Schema primitive, to check a client round-trips every type
+- `dispute-charge`: files a billing dispute, returns a JSON receipt
+- `list-contacts`, `get-contact-by-id`, `get-contact-by-email`, `search-contacts`, `create-contact`, `update-contact`, `delete-contact`: SQLite CRUD
+
+Three large-schema tools start disabled, for testing how a client handles wide inputs: `submit-customs-declaration` (all fields required), `create-product-listing` (25 required, 25 optional), `search-properties` (50 optional filters).
 
 ### Contacts
 

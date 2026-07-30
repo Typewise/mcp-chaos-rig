@@ -57,6 +57,28 @@
           <div id="oauth-config" style="display:none">
             <h2>OAuth Settings</h2>
             <div class="section">
+              <h3>Client Registration</h3>
+              <p style="color:#8b949e; font-size:11px; margin-bottom:8px">How the client gets its credentials. Static mode drops <code style="font-size:10px">registration_endpoint</code> from metadata and answers <code style="font-size:10px">/register</code> with 404 &mdash; the Google/enterprise IdP scenario.</p>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div>
+                  <label><input type="radio" name="oauthClientMode" value="dcr" checked onchange="updateOAuthClientSettings()"> Dynamic registration</label>
+                  <div style="color:#8b949e; font-size:11px; margin-left:24px">Clients POST to <code style="font-size:10px">/oauth/register</code> and get fresh credentials (RFC 7591).</div>
+                </div>
+                <div>
+                  <label><input type="radio" name="oauthClientMode" value="static" onchange="updateOAuthClientSettings()"> Pre-registered client only</label>
+                  <div style="color:#8b949e; font-size:11px; margin-left:24px">Only the credentials below are accepted. Any other <code style="font-size:10px">client_id</code> gets <code style="font-size:10px">invalid_client</code>.</div>
+                </div>
+              </div>
+              <div id="static-client-fields" style="display:none; margin-top:10px">
+                <div style="display:flex; flex-direction:column; gap:6px">
+                  <input type="text" id="static-client-id" placeholder="client_id" onchange="updateOAuthClientSettings()">
+                  <input type="text" id="static-client-secret" placeholder="client_secret (leave empty for a public client)" onchange="updateOAuthClientSettings()">
+                  <textarea id="static-redirect-uris" rows="2" placeholder="redirect_uris, one per line" onchange="updateOAuthClientSettings()"></textarea>
+                </div>
+                <div style="color:#8b949e; font-size:11px; margin-top:6px">Redirect URIs must match exactly, except the port on loopback hosts (RFC 8252). Changing <code style="font-size:10px">client_id</code> invalidates the previous one.</div>
+              </div>
+            </div>
+            <div class="section">
               <h3>Access Tokens</h3>
               <p style="color:#8b949e; font-size:11px; margin-bottom:8px">How the server responds to access tokens. Set a short TTL (5&ndash;10s) to test client-side token refresh.</p>
               <div style="display:flex; flex-direction:column; gap:6px">
@@ -152,7 +174,7 @@
                 <div class="url-display" id="oauth-authorize"></div>
                 <div style="margin:4px 0"><strong>Token:</strong></div>
                 <div class="url-display" id="oauth-token"></div>
-                <div style="margin:4px 0"><strong>Register:</strong></div>
+                <div style="margin:4px 0" id="oauth-register-label"><strong>Register:</strong></div>
                 <div class="url-display" id="oauth-register"></div>
               </div>
             </details>

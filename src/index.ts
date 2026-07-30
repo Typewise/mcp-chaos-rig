@@ -21,7 +21,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
-app.get("/ui", (_req, res) => res.render("index"));
+app.get("/ui", (_req, res) =>
+  res.render("index", { authMode: stateManager.state.authMode }),
+);
 app.get("/favicon.svg", (_req, res) => {
   res
     .type("image/svg+xml")
@@ -111,7 +113,15 @@ const server = app.listen(PORT, () => {
   console.log(`  Web UI:        ${BASE_URL}/ui`);
   console.log(`  MCP endpoint:  ${BASE_URL}/mcp`);
   console.log(`  OAuth:         ${BASE_URL}/oauth`);
-  console.log(`  API:           ${BASE_URL}/api/state\n`);
+  console.log(`  API:           ${BASE_URL}/api/state`);
+  const { authMode, oauthClientMode, staticClient } = stateManager.state;
+  const clients =
+    authMode === "oauth" && oauthClientMode === "static"
+      ? `static client ${staticClient.clientId}`
+      : authMode === "oauth"
+        ? "dynamic registration"
+        : "";
+  console.log(`  Auth mode:     ${authMode}${clients ? ` (${clients})` : ""}\n`);
 });
 
 server.on("error", (err) => {

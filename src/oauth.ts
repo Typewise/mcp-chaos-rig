@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { DemoInMemoryAuthProvider } from "@modelcontextprotocol/sdk/examples/server/demoInMemoryOAuthProvider.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
+import { redirectUriMatches } from "@modelcontextprotocol/sdk/server/auth/handlers/authorize.js";
 import { InvalidTokenError, InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import { stateManager } from "./state.js";
 
@@ -11,6 +12,44 @@ const oauthProvider = new DemoInMemoryAuthProvider();
 
 // Tracks which client_id owns each refresh token (for strict mode)
 const refreshTokenOwners = new Map<string, string>();
+
+const clientStore = (oauthProvider.clientsStore as any).clients as Map<string, any>;
+let seededStaticClientId: string | null = null;
+
+/**
+ * Reconciles the in-memory client store with the configured static client.
+ *
+ * The previously seeded id is always dropped first, so rotating client_id or
+ * leaving static mode invalidates the old credentials the way a real server
+ * would. Entering static mode empties the store, so a client holding an
+ * earlier dynamic registration stops being accepted instead of quietly
+ * continuing to work.
+ */
+export function syncStaticClient() {
+  const { oauthClientMode, staticClient } = stateManager.state;
+
+  if (seededStaticClientId) {
+    clientStore.delete(seededStaticClientId);
+    seededStaticClientId = null;
+  }
+  if (oauthClientMode !== "static") return;
+
+  clientStore.clear();
+  clientStore.set(staticClient.clientId, {
+    client_id: staticClient.clientId,
+    ...(staticClient.clientSecret ? { client_secret: staticClient.clientSecret } : {}),
+    client_name: "Pre-registered client",
+    redirect_uris: staticClient.redirectUris,
+    grant_types: ["authorization_code", "refresh_token"],
+    response_types: ["code"],
+    token_endpoint_auth_method: staticClient.clientSecret ? "client_secret_post" : "none",
+  });
+  seededStaticClientId = staticClient.clientId;
+}
+
+function registrationDisabled(): boolean {
+  return stateManager.state.oauthClientMode === "static";
+}
 
 const originalExchange = oauthProvider.exchangeAuthorizationCode.bind(oauthProvider);
 oauthProvider.exchangeAuthorizationCode = async (client: any, authorizationCode: string, codeVerifier?: string) => {
@@ -141,6 +180,7 @@ export const oauthMiddleware = (req: any, res: any, next: any) => {
 
 export function createOAuthRouter(baseUrl: string): Router {
   const router = Router();
+  syncStaticClient();
 
   function serveAuthServerMetadata(_req: any, res: any) {
     if (stateManager.state.authMode !== "oauth") {
@@ -153,12 +193,15 @@ export function createOAuthRouter(baseUrl: string): Router {
       issuer,
       authorization_endpoint: `${issuer}/authorize`,
       token_endpoint: `${issuer}/token`,
-      registration_endpoint: `${issuer}/register`,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"],
       token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
       code_challenge_methods_supported: ["S256"],
     };
+    // Omitted in static mode: how a client discovers it must use pre-issued credentials.
+    if (!registrationDisabled()) {
+      metadata.registration_endpoint = `${issuer}/register`;
+    }
     if (!hideScopesFromMetadata && scopes.length > 0) {
       metadata.scopes_supported = scopes;
     }
@@ -222,6 +265,48 @@ export function createOAuthRouter(baseUrl: string): Router {
     issuerUrl: new URL(`${baseUrl}/oauth`),
     scopesSupported: ["mcp:tools"],
   });
+  function rejectRegistration(_req: any, res: any) {
+    res.status(404).json({
+      error: "registration_not_supported",
+      error_description:
+        `Dynamic client registration is disabled (static client mode). ` +
+        `Use the pre-registered client_id [${stateManager.state.staticClient.clientId}].`,
+    });
+  }
+
+  // Registered before the SDK router so it wins the /oauth/register path.
+  router.post("/oauth/register", (req, res, next) => {
+    if (registrationDisabled()) return rejectRegistration(req, res);
+    next();
+  });
+
+  /**
+   * The SDK answers a redirect_uri mismatch with a bare "Unregistered
+   * redirect_uri", which is the first thing to go wrong when pointing a
+   * deployed client at a rig still holding the local default. Answer with the
+   * URIs that are actually registered instead.
+   */
+  router.all("/oauth/authorize", (req: any, res: any, next: any) => {
+    const { authMode, oauthClientMode, staticClient } = stateManager.state;
+    if (authMode !== "oauth" || oauthClientMode !== "static") return next();
+
+    const params = req.method === "POST" ? req.body || {} : req.query;
+    const requested = params.redirect_uri;
+    if (params.client_id !== staticClient.clientId) return next();
+    if (typeof requested !== "string" || !requested) return next();
+    if (staticClient.redirectUris.some((registered) => redirectUriMatches(requested, registered))) {
+      return next();
+    }
+
+    res.status(400).json({
+      error: "invalid_request",
+      error_description:
+        `Unregistered redirect_uri [${requested}]. Registered: ` +
+        `${staticClient.redirectUris.join(", ") || "(none)"}. Match is exact, ` +
+        `except the port on loopback hosts (RFC 8252).`,
+    });
+  });
+
   router.use("/oauth", requireOAuthActive, sdkAuthRouter);
 
   function handleAuthorizeDecision(req: any, res: any) {
@@ -301,6 +386,7 @@ export function createOAuthRouter(baseUrl: string): Router {
   // SDK falls back to POST /register at root when discovery fails.
   // Without this, Express returns HTML 404 which breaks parseErrorResponse.
   router.post("/register", (req, res) => {
+    if (registrationDisabled()) return rejectRegistration(req, res);
     if (stateManager.state.authMode === "oauth") {
       return sdkAuthRouter(req, res, () => {
         res.status(404).json({ error: "not_found" });

@@ -45,7 +45,7 @@ const authDescs = {
   none: 'No auth. All requests accepted. YOLO.',
   bearer: 'Require Authorization: Bearer <token> on every request.',
   headers: 'Require fixed headers on every request. Returns 401 with details on missing or mismatched headers.',
-  oauth: 'Full OAuth 2.1 flow. The /authorize endpoint shows a consent page where you can approve, decline, send a wrong code, or send a wrong state.',
+  oauth: 'Full OAuth 2.1 flow, with dynamic registration or a pre-registered client. The /authorize endpoint shows a consent page where you can approve, decline, send a wrong code, or send a wrong state.',
 };
 
 function updateAuthUI(mode) {
@@ -157,6 +157,26 @@ async function updateOAuthSettings() {
   const strictRefreshTokens = document.getElementById('strict-refresh-tokens').checked;
   syncStrictRefreshRow(failOAuthRefresh);
   await api('/api/oauth-settings', { accessTokenTtlSecs, failOAuthRefresh, strictRefreshTokens });
+}
+
+async function updateOAuthClientSettings() {
+  const mode = document.querySelector('input[name="oauthClientMode"]:checked').value;
+  const clientId = document.getElementById('static-client-id').value.trim();
+  const clientSecret = document.getElementById('static-client-secret').value.trim();
+  const redirectUris = document.getElementById('static-redirect-uris').value.split('\n').map(s => s.trim()).filter(Boolean);
+  syncStaticClientFields(mode);
+  const payload = { mode, clientSecret, redirectUris };
+  if (clientId) payload.clientId = clientId;
+  await api('/api/oauth-client', payload);
+}
+
+function syncStaticClientFields(mode) {
+  const fields = document.getElementById('static-client-fields');
+  if (fields) fields.style.display = mode === 'static' ? 'block' : 'none';
+  const label = document.getElementById('oauth-register-label');
+  const url = document.getElementById('oauth-register');
+  if (label) label.innerHTML = mode === 'static' ? '<strong>Register:</strong> <span style="color:#8b949e">disabled</span>' : '<strong>Register:</strong>';
+  if (url) url.style.opacity = mode === 'static' ? '0.4' : '1';
 }
 
 function syncStrictRefreshRow(rejectAll) {
@@ -352,6 +372,18 @@ async function poll() {
     const strictRefreshCb = document.getElementById('strict-refresh-tokens');
     if (strictRefreshCb && strictRefreshCb.checked !== state.strictRefreshTokens) strictRefreshCb.checked = state.strictRefreshTokens;
     syncStrictRefreshRow(state.failOAuthRefresh);
+
+    if (state.oauthClientMode) {
+      const clientModeRadio = document.querySelector(`input[name="oauthClientMode"][value="${state.oauthClientMode}"]`);
+      if (clientModeRadio && !clientModeRadio.checked) clientModeRadio.checked = true;
+      syncStaticClientFields(state.oauthClientMode);
+      const idInput = document.getElementById('static-client-id');
+      if (idInput && document.activeElement !== idInput) idInput.value = state.staticClient.clientId;
+      const secretInput = document.getElementById('static-client-secret');
+      if (secretInput && document.activeElement !== secretInput) secretInput.value = state.staticClient.clientSecret;
+      const urisInput = document.getElementById('static-redirect-uris');
+      if (urisInput && document.activeElement !== urisInput) urisInput.value = state.staticClient.redirectUris.join('\n');
+    }
 
     if (state.authMode === 'headers' && state.requiredHeaders) {
       const container = document.getElementById('headers-pairs');

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { stateManager, type AuthMode, type RejectMode, type ToolVersion } from "./state.js";
+import { stateManager, type AuthMode, type OAuthClientMode, type RejectMode, type ToolVersion } from "./state.js";
 import { getSessionCount, getSessionIds } from "./server.js";
+import { syncStaticClient } from "./oauth.js";
 import { getAllToolNames, hasVersions, getToolDef } from "./tools.js";
 import { listContacts, resetDatabase } from "./db.js";
 
@@ -142,6 +143,32 @@ export function createApiRouter(): Router {
       failOAuthRefresh: stateManager.state.failOAuthRefresh,
       strictRefreshTokens: stateManager.state.strictRefreshTokens,
     });
+  });
+
+  router.post("/oauth-client", (req, res) => {
+    const { mode, clientId, clientSecret, redirectUris } = req.body as {
+      mode?: OAuthClientMode;
+      clientId?: string;
+      clientSecret?: string;
+      redirectUris?: string[];
+    };
+    if (mode !== undefined && mode !== "dcr" && mode !== "static") {
+      res.status(400).json({ error: "Invalid mode, expected 'dcr' or 'static'" });
+      return;
+    }
+    if (clientId !== undefined && (typeof clientId !== "string" || !clientId.trim())) {
+      res.status(400).json({ error: "clientId must be a non-empty string" });
+      return;
+    }
+    const { staticClient } = stateManager.state;
+    if (mode !== undefined) stateManager.state.oauthClientMode = mode;
+    if (clientId !== undefined) staticClient.clientId = clientId.trim();
+    if (typeof clientSecret === "string") staticClient.clientSecret = clientSecret.trim();
+    if (Array.isArray(redirectUris)) {
+      staticClient.redirectUris = redirectUris.map((uri) => String(uri).trim()).filter(Boolean);
+    }
+    syncStaticClient();
+    res.json({ oauthClientMode: stateManager.state.oauthClientMode, staticClient });
   });
 
   router.post("/scope-settings", (req, res) => {

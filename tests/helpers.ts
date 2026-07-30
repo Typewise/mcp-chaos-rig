@@ -1,4 +1,4 @@
-export const BASE = "http://localhost:4100";
+export const BASE = process.env.RIG_BASE_URL || "http://localhost:4100";
 
 export async function api(path: string, body?: object) {
   const opts: RequestInit = body
@@ -33,6 +33,7 @@ export async function resetState() {
   });
   await api("/api/reject-auth", { target: "bearer", mode: "none" });
   await api("/api/reject-auth", { target: "oauth", mode: "none" });
+  await api("/api/oauth-client", { mode: "dcr" });
 }
 
 /** Call in beforeAll — skips the entire suite if the server is unreachable. */

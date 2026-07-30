@@ -479,6 +479,81 @@ const searchPropertiesTool: ToolDef = {
   },
 };
 
+const disputeChargeTool: ToolDef = {
+  name: "dispute-charge",
+  title: "Dispute a Charge",
+  description:
+    "Files a billing dispute for a charge the customer does not recognize or believes is wrong. " +
+    "The dispute is filed on `account_number` and attributed to `customer_email`; together they " +
+    "identify WHICH account the charge sits on and WHO is filing, so a secure deployment binds " +
+    "them to verified context rather than letting them be inferred from the conversation. The " +
+    "charge itself is described by `merchant`, `amount`, and `reason`. Returns a JSON receipt " +
+    "with the dispute id, case number, and provisional-credit status.",
+  inputSchema: {
+    account_number: z.string().describe(
+      "The customer's account number that the disputed charge sits on. Determines which account is " +
+      "in scope; another account's number would let someone dispute a charge that isn't theirs. " +
+      "Bind to a verified account number, not the conversation."
+    ),
+    customer_email: z.string().describe(
+      "Email of the authenticated customer filing the dispute. Written to the case record and used " +
+      "for eligibility. Should be the verified signed-in identity."
+    ),
+    merchant: z.string().describe(
+      "Name of the merchant or biller on the disputed charge, as the customer describes it, e.g. " +
+      "'Acme Streaming' or 'CityParking'."
+    ),
+    amount: z.number().describe(
+      "Amount being disputed in the account currency, e.g. 49.90. Must be positive."
+    ),
+    currency: z.string().describe(
+      "ISO 4217 currency code of the disputed amount, e.g. 'EUR', 'USD'."
+    ),
+    reason: z
+      .enum([
+        "unrecognized",
+        "duplicate",
+        "wrong_amount",
+        "not_received",
+        "not_as_described",
+        "canceled_but_charged",
+        "other",
+      ])
+      .describe(
+        "Dispute reason. 'unrecognized' = the customer does not recognize the charge; 'duplicate' = " +
+        "charged more than once; 'wrong_amount'; 'not_received'; 'not_as_described'; " +
+        "'canceled_but_charged'; 'other'."
+      ),
+    description: z.string().optional().describe(
+      "Optional free-text explanation the customer gives, e.g. 'I canceled this subscription in April " +
+      "but was charged again in May.'"
+    ),
+  },
+  handler: async (args) => {
+    await slowModeDelay();
+    console.log("[dispute-charge]", JSON.stringify(args));
+    const amount = Number(args.amount);
+    if (!(amount > 0)) return textResult("Error: amount must be a positive number.");
+    const disputeId = `dp_${Math.random().toString(36).slice(2, 12)}`;
+    const caseNumber = `CASE-${Math.floor(100000 + Math.random() * 900000)}`;
+    return textResult(JSON.stringify({
+      status: "submitted",
+      dispute_id: disputeId,
+      case_number: caseNumber,
+      account_number: String(args.account_number),
+      customer_email: String(args.customer_email),
+      merchant: String(args.merchant),
+      amount,
+      currency: String(args.currency),
+      reason: String(args.reason),
+      description: String(args.description ?? ""),
+      provisional_credit: amount,
+      provisional_credit_issued: true,
+      submitted_at: new Date().toISOString(),
+    }, null, 2));
+  },
+};
+
 const typeEchoTool: ToolDef = {
   name: "typeEcho",
   title: "Type Echo",
@@ -518,6 +593,7 @@ const staticTools: Record<string, ToolDef> = {
   "submit-customs-declaration": submitCustomsDeclarationTool,
   "create-product-listing": createProductListingTool,
   "search-properties": searchPropertiesTool,
+  "dispute-charge": disputeChargeTool,
 };
 
 export function getToolDef(name: string, version?: ToolVersion): ToolDef | undefined {
